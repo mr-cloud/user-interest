@@ -2,7 +2,7 @@ from time import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import scale
 
@@ -10,9 +10,11 @@ import pandas as pd
 import os
 from sklearn.externals import joblib
 import preprocessing_photos
+import datetime
 
 
-np.random.seed(42)
+now = datetime.datetime.now()
+np.random.seed(now.second)
 
 
 def bench_k_means(estimator, name, data):
@@ -64,7 +66,17 @@ def viz_data(data, K, pic_name):
 
 def build_model(data, K, name='k-means++', num_epoch=10, num_iter=300, tol = 1e-4):
     print('init\t\ttime\tinertia')
-    estimator = KMeans(init=name, n_clusters=K, n_init=num_epoch, max_iter=num_iter, tol=tol)
+    estimator = KMeans(init=name, n_clusters=K, n_init=num_epoch, max_iter=num_iter, tol=tol, verbose=1)
+    name, time_cost, loss = bench_k_means(estimator, name, data)
+    print('%-9s\t%.2fs\t%i' % (name, time_cost, loss))
+    return estimator
+
+
+def build_model_with_batchsize(data, K, name='k-means++', batch_size = 100, num_iter=100, init_size=None):
+    print('init\t\ttime\tinertia')
+    estimator = MiniBatchKMeans(n_clusters=K, init=name, max_iter=num_iter, batch_size=batch_size, verbose=1,
+                                compute_labels=True, random_state=None, tol=0.0, max_no_improvement=10, init_size=init_size,
+                                n_init=3, reassignment_ratio=0.01)
     name, time_cost, loss = bench_k_means(estimator, name, data)
     print('%-9s\t%.2fs\t%i' % (name, time_cost, loss))
     return estimator
@@ -84,10 +96,13 @@ def main():
                                           header=None, dtype=np.float32)
     data = scale(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[1:]))
     print('Data size: ', data.shape)
-    for K in [10, 30, 100]:
+    for K in [300, 1000]:
         print('\n' + '_' * 82)
         print('Modeling K={}...'.format(K))
-        estimator = build_model(data, K)
+        if K > 1000:
+            estimator = build_model_with_batchsize(data, K, batch_size=100, init_size=int(data.shape[0] * 0.01))
+        else:
+            estimator = build_model(data, K)
         estimator.examples_id_ = np.reshape(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[0:1]), newshape=[-1])
         print('Saving model K={}...'.format(K))
         joblib.dump(estimator, os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'photo-{}.pkl'.format(K)))

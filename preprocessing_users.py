@@ -14,6 +14,9 @@ def build_pop_examples(interact_filename, photo_model, example_filename, K):
     kmeans = joblib.load(photo_model)
     n_clusters, n_features = kmeans.cluster_centers_.shape
     examples = dict()
+    photos_id_lable = dict()
+    for idx, photo_id in enumerate(kmeans.examples_id_):
+        photos_id_lable[int(photo_id)] = kmeans.labels_[idx]
     with open(interact_filename, 'r') as interact_file:
         for line in interact_file:
             line = line.strip()
@@ -27,8 +30,15 @@ def build_pop_examples(interact_filename, photo_model, example_filename, K):
                 playing_time = int(splits[6])
                 duration_time = int(splits[7])
 
-                features = np.ndarray(shape=[1, n_clusters], dtype=np.float32)
-                center = kmeans.predict()
+                if user_id in examples.keys():
+                    features = examples[user_id]
+                else:
+                    features = np.ndarray(shape=[1, n_clusters], dtype=np.float32)
+                if photo_id not in photos_id_lable.keys():
+                    continue
+                cate_id = photos_id_lable[photo_id]
+                # TODO
+
 
 
 def main():
