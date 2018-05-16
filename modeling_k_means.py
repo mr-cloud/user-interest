@@ -1,6 +1,7 @@
 from time import time
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
 from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.decomposition import PCA
@@ -64,7 +65,7 @@ def viz_data(data, K, pic_name):
     plt.savefig(pic_name)
 
 
-def build_model(data, K, name='k-means++', num_epoch=10, num_iter=300, tol = 1e-4):
+def build_model(data, K, name='k-means++', num_epoch=10, num_iter=300, tol=1e-4):
     print('init\t\ttime\tinertia')
     estimator = KMeans(init=name, n_clusters=K, n_init=num_epoch, max_iter=num_iter, tol=tol, verbose=1)
     name, time_cost, loss = bench_k_means(estimator, name, data)
@@ -72,41 +73,74 @@ def build_model(data, K, name='k-means++', num_epoch=10, num_iter=300, tol = 1e-
     return estimator
 
 
-def build_model_with_batchsize(data, K, name='k-means++', batch_size = 100, num_iter=100, init_size=None):
+def build_model_with_batch(data, K, name='k-means++', batch_size = 100, num_iter=100, init_size=None, n_init=3, max_no_improvement=10):
     print('init\t\ttime\tinertia')
     estimator = MiniBatchKMeans(n_clusters=K, init=name, max_iter=num_iter, batch_size=batch_size, verbose=1,
-                                compute_labels=True, random_state=None, tol=0.0, max_no_improvement=10, init_size=init_size,
-                                n_init=3, reassignment_ratio=0.01)
+                                compute_labels=True, random_state=None, tol=0.0, max_no_improvement=max_no_improvement, init_size=init_size,
+                                n_init=n_init, reassignment_ratio=0.01)
     name, time_cost, loss = bench_k_means(estimator, name, data)
     print('%-9s\t%.2fs\t%i' % (name, time_cost, loss))
     return estimator
 
 
-def main():
-    if not os.path.exists(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'pca-reduced.jpg')):
-        test_photo_examples_df = pd.read_csv(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'test_photo_examples.txt'),
+def modeling(pca_pic, pca_file, train_examples, Ks, model_name, batch_style_threshold=sys.maxsize, batch_size=1000, num_iter=1000, init_size=10000, n_init=3, max_no_improvement=30):
+    if not os.path.exists(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, pca_pic)):
+        test_photo_examples_df = pd.read_csv(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, pca_file),
                                              header=None, dtype=np.float32)
         data = scale(test_photo_examples_df.as_matrix(columns=test_photo_examples_df.columns[1:]))
-        K = 10
+        K_viz = 10
         print('Started PCA exploring...')
-        viz_data(data, K, os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'pca-reduced.jpg'))
+        viz_data(data, K_viz, os.path.join(preprocessing_photos.DATA_HOUSE_PATH, pca_pic))
         print('Finished PCA exploring.')
-
-    train_photo_examples_df = pd.read_csv(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'train_photo_examples.txt'),
+    else:
+        print('Viz Model has been built!')
+    train_photo_examples_df = pd.read_csv(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, train_examples),
                                           header=None, dtype=np.float32)
     data = scale(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[1:]))
     print('Data size: ', data.shape)
-    for K in [300, 1000]:
+    for K in Ks:
         print('\n' + '_' * 82)
         print('Modeling K={}...'.format(K))
-        if K > 1000:
-            estimator = build_model_with_batchsize(data, K, batch_size=100, init_size=int(data.shape[0] * 0.01))
+        if K > batch_style_threshold:
+            estimator = build_model_with_batch(data, K, batch_size=batch_size, num_iter=num_iter, init_size=init_size, n_init=n_init, max_no_improvement=max_no_improvement)
         else:
             estimator = build_model(data, K)
         estimator.examples_id_ = np.reshape(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[0:1]), newshape=[-1])
         print('Saving model K={}...'.format(K))
-        joblib.dump(estimator, os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'photo-{}.pkl'.format(K)))
+        joblib.dump(estimator, os.path.join(preprocessing_photos.DATA_HOUSE_PATH, model_name.format(K)))
         print('_' * 82 + '\n')
+
+
+def modeling_photos():
+    modeling('pca-reduced.jpg', 'test_photo_examples.txt', 'train_photo_examples.txt', [10, 30, 100, 300, 1000], 'photo-{}.pkl', 300)
+
+
+def modeling_users():
+    K1s = [10, 30, 100, 300, 1000]
+    pop_examples_prefix = 'pop_examples-'
+    for K1 in K1s:
+        train_examples = pop_examples_prefix + str(K1) + '.txt'
+        inf = K1
+        sup = max(K1 + 1, min(1000, K1 * (K1 - 1) // 2))
+        K2s = [inf]
+        while inf * 3 < sup:
+            inf *= 3
+            K2s.append(inf)
+        modeling('pca-reduced-users.jpg',
+                 'pop_examples-10.txt',
+                 train_examples,
+                 K2s,
+                 'user-{}-' + 'photo-' + str(K1) + '.pkl'
+                 )
+
+
+def main():
+    # modeling photos
+    # modeling_photos()
+
+    # modeling users
+    modeling_users()
+
     print('Finished.')
 
 
