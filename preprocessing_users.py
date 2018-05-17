@@ -41,7 +41,7 @@ def build_pop_examples(interact_filename, photo_model, example_filename, K):
                 if (photo_id not in photo_id_lable.keys()) or duration_time == 0:
                     continue
                 cate_id = photo_id_lable[photo_id]
-                # weighted behaviors
+                # weighted behaviors TODO: Recently priming with timestamp weight
                 if click == 0 and like == 0 and follow == 0:
                     bonus = -1
                 else:
