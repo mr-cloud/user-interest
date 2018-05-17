@@ -130,7 +130,7 @@ def modeling_users():
                  'pop_examples-10.txt',
                  train_examples,
                  K2s,
-                 'user-{}-' + 'photo-' + str(K1) + '.pkl'
+                 'pop-{}-' + 'photo-' + str(K1) + '.pkl'
                  )
 
 
