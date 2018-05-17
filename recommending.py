@@ -67,7 +67,7 @@ def recommend():
             magicians.append(Magician(photo_kmeans, pop_kmeans, K1, K2))
     print('{} models loaded.'.format(len(magicians)))
     # sorting models by multiplication of inertia
-    magicians.sort(key=attrgetter('comb_inertia'))
+    magicians.sort(key=attrgetter('total_inertia'))
     for magician in magicians:
         print(str(magician))
 
@@ -86,9 +86,9 @@ def recommend():
 
     # inference
     magician_predicts_map = dict()
-    for magician in magicians:
+    for rank, magician in enumerate(magicians):
         magician_predicts_map[magician.name] = open(os.path.join(preprocessing_photos.DATA_HOUSE_PATH,
-                                                                 magician.name), 'w')
+                                                                 str(rank) + '_' + magician.name), 'w')
     with open(os.path.join(preprocessing_photos.RAW_DATA_PATH, 'test_interaction'), 'r') as predict_data:
         for line in predict_data:
             line = line.strip()
