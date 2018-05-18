@@ -15,3 +15,7 @@
 - 为用户、作品归类：<user_id, photo_id> -> <pop_id, cate_id>
 - 计算点击率：P{click} = pop_features[cate_id] mapped into [0, 1]
 - 输出结果：<user_id, photo_id, click_probability>
+
+AUC:
+- v0.1.0
+    - 0_submission-10-30.txt: 0.493990
