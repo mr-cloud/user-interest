@@ -139,7 +139,7 @@ def main():
     modeling_photos()
 
     # modeling users
-    # modeling_users()
+    modeling_users()
 
     print('Finished.')
 
