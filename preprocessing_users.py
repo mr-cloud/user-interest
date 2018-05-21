@@ -42,7 +42,7 @@ def build_pop_examples(interact_filename, photo_model, example_filename):
                 cate_id = photo_id_lable[photo_id]
                 # weighted behaviors
                 # Recently priming with timestamp weight. belongs to [1, 2]
-                time_weight = math.min(math,max(1.0, math.log10(1.0 * show_time / sys.maxsize) + 9), 2.0)
+                time_weight = min(max(1.0, math.log10(1.0 * show_time / sys.maxsize) + 9), 2.0)
                 if click == 0 and like == 0 and follow == 0:
                     bonus = -1
                 else:
