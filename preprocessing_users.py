@@ -1,15 +1,13 @@
 import os
-import pandas as pd
 from sklearn.externals import joblib
 import math
 import numpy as np
 import sys
-from sklearn.preprocessing import scale
 
 import preprocessing_photos
 
 
-def build_pop_examples(interact_filename, photo_model, example_filename, K):
+def build_pop_examples(interact_filename, photo_model, example_filename):
     # load model
     kmeans = joblib.load(photo_model)
     n_clusters, n_features = kmeans.cluster_centers_.shape
@@ -31,6 +29,7 @@ def build_pop_examples(interact_filename, photo_model, example_filename, K):
                 click = int(splits[2])
                 like = int(splits[3])
                 follow = int(splits[4])
+                show_time = int(splits[5])
                 playing_time = int(splits[6])
                 duration_time = int(splits[7])
 
@@ -41,12 +40,14 @@ def build_pop_examples(interact_filename, photo_model, example_filename, K):
                 if (photo_id not in photo_id_lable.keys()) or duration_time == 0:
                     continue
                 cate_id = photo_id_lable[photo_id]
-                # weighted behaviors TODO: Recently priming with timestamp weight
+                # weighted behaviors
+                # Recently priming with timestamp weight. belongs to [1, 2]
+                time_weight = math.min(math,max(1.0, math.log10(1.0 * show_time / sys.maxsize) + 9), 2.0)
                 if click == 0 and like == 0 and follow == 0:
                     bonus = -1
                 else:
                     bonus = (click * playing_time / duration_time + 2 * like + 3 * follow)
-                features[cate_id] += bonus
+                features[cate_id] += time_weight * bonus
                 examples[user_id] = features
         print('#users={}'.format(len(examples)))
         print('Saving to file...')
@@ -63,18 +64,10 @@ def build_pop_examples(interact_filename, photo_model, example_filename, K):
 def main():
     K1s = [10, 30, 100, 300, 1000]
     for K1 in K1s:
-        inf = K1
-        sup = max(K1 + 1, min(1000, K1 * (K1 - 1) // 2))
-        K2s = [inf]
-        while inf * 3 < sup:
-            inf *= 3
-            K2s.append(inf)
-        for K2 in K2s:
-            build_pop_examples(os.path.join(preprocessing_photos.RAW_DATA_PATH, 'train_interaction.txt'),
-                               os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'photo-{}.pkl'.format(K1)),
-                               os.path.join(preprocessing_photos.CLEAN_DATA_PATH,
-                                            'pop_examples-{}-{}.txt'.format(K1, K2)),
-                               K2)
+        build_pop_examples(os.path.join(preprocessing_photos.RAW_DATA_PATH, 'train_interaction.txt'),
+                           os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'photo-{}.pkl'.format(K1)),
+                           os.path.join(preprocessing_photos.CLEAN_DATA_PATH,
+                                        'pop_examples-{}.txt'.format(K1)))
 
     print('Examples building finished.')
 

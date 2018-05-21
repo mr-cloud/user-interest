@@ -94,6 +94,7 @@ def modeling(pca_pic, pca_file, train_examples, Ks, model_name, batch_style_thre
         print('Finished PCA exploring.')
     else:
         print('Viz Model has been built!')
+
     train_photo_examples_df = pd.read_csv(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, train_examples),
                                           header=None, dtype=np.float32)
     data = scale(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[1:]))

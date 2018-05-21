@@ -86,11 +86,6 @@ def recommend():
         photo_id = int(photo_examples[i, 0])
         photo_features_map[photo_id] = norm_dataset[i]
 
-    # train_labels = np.reshape(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[0:1]), newshape=[-1])
-    # for i in range(train_labels):
-    #     photo_id = int(train_labels[i])
-    #     photo_features_map[photo_id] = train_dataset[i]
-    #
     # inference
     print('Inferring..')
     magician_predicts_map = dict()
