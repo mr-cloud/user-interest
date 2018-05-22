@@ -2,7 +2,9 @@
 物以类聚，人以群分
 作品分类：分K1类 belongs to [10, 100] (IMDB电影分类标签: 12, Youtube: 18)
 - 输入特征：人脸 --> 文字 --> 图像
-    - face features. <num_face, face_occu, gender_pref ([0, 1] 0 means all female, 1 means all male), age, looking    
+    - face features. <num_face, face_occu, gender_pref ([0, 1] 0 means all female, 1 means all male), age, looking
+    - text features. a)Embedding b)TF-IDF
+    - hot features. <show, click, like, follow>    
 - 算法：K-means, autoencoder
 - 输出model：<cate_id, cate_features, [photo_id: set]>  
 <=> KMeans with <example_id, label> 
