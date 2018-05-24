@@ -17,5 +17,5 @@
 
 预测：
 - 为用户、作品归类：<user_id, photo_id> -> <pop_id, cate_id>
-- 计算点击率：P{click} = pop_features[cate_id] mapped into [0, 1]
+- 计算点击率：P{click} = pop_features[cate_id] mapped into [0, 1] TODO: 不应该按列scale后，按行计算占比作为点击概率
 - 输出结果：<user_id, photo_id, click_probability>
