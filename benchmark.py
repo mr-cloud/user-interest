@@ -189,7 +189,7 @@ submission['user_id'] = test_interaction['user_id']
 submission['photo_id'] = test_interaction['photo_id']
 submission['click_probability'] = y_sub
 submission['click_probability'].apply(lambda x: float('%.6f' % x))
-submission.to_csv('submission_lr.txt', sep='\t', index=False, header=False)
+submission.to_csv('datahouse/submission_lr.txt', sep='\t', index=False, header=False)
 
 out.write('Finished.')
 out.flush()
