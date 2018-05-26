@@ -19,8 +19,9 @@ def load_data(filenames, prefix):
                     corpus.append(segs[1])
     return corpus, photos_id
 
-# TODO test
-filenames = ['sample_train_text.txt']
+
+filenames = ['train_text.txt', 'test_text.txt']
+# filenames = ['sample_train_text.txt']
 prefix = preprocessing_photos.RAW_DATA_PATH
 corpus, photos_id = load_data(filenames, prefix)
 
@@ -34,3 +35,4 @@ with open(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'photo_term.txt'), 
     for ind in range(maxargs.shape[0]):
         output.write('{} {}'.format(photos_id[ind], vectorizer.get_feature_names()[maxargs[ind, 0]]))
         output.write('\n')
+print('Finished')

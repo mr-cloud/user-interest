@@ -73,7 +73,7 @@ del words  # Hint to reduce memory.
 print('Saving common words counter with index...')
 with open(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'common-words.txt'), 'w') as output:
     for wc in count:
-        output.write('{} {} {}'.format(wc[0], wc[1], dictionary[wc[0]]))
+        output.write('{} {} {}\n'.format(wc[0], wc[1], dictionary[wc[0]]))
 data_index = 0
 
 
@@ -130,7 +130,7 @@ num_skips = 2  # How many times to reuse an input to generate a label.
 valid_size = 16  # Random set of words to evaluate similarity on.
 valid_window = 100  # Only pick dev samples in the head of the distribution.
 valid_examples = np.array(random.sample(range(valid_window), valid_size))
-num_sampled = 64  # parts of batch
+num_sampled = 64  # number of negative logits to sample (except label) for each prediction from size of vocabulary
 
 graph = tf.Graph()
 
@@ -227,7 +227,8 @@ with graph.as_default(), tf.device('/cpu:0'):
                 pylab.annotate(label, xy=(x, y), xytext=(5, 2), textcoords='offset points',
                                ha='right', va='bottom')
             # pylab.show()
-            pylab.save(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'embedding-pca.jpg'))
+            pylab.savefig(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'embedding-pca.jpg'))
 
         words = [reverse_dictionary[i] for i in range(1, num_points + 1)]
         plot(two_d_embeddings, words)
+        print('Finished.')
