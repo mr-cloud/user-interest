@@ -71,9 +71,9 @@ print('Most common words (+UNK)', count[:5])
 print('Sample data', data[:10])
 del words  # Hint to reduce memory.
 print('Saving common words counter with index...')
-with open(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'common-words.txt'), 'w') as output:
+with open(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'common-words-counter.txt'), 'w') as output:
     for wc in count:
-        output.write('{} {} {}\n'.format(wc[0], wc[1], dictionary[wc[0]]))
+        output.write('{} {}\n'.format(wc[0], wc[1]))
 data_index = 0
 
 
