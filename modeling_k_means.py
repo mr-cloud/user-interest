@@ -5,7 +5,7 @@ import sys
 
 from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import scale
+from sklearn.preprocessing import scale, MinMaxScaler
 
 import pandas as pd
 import os
@@ -16,6 +16,16 @@ import datetime
 
 now = datetime.datetime.now()
 np.random.seed(now.second)
+
+COMMON_WORDS_COUNTER = os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'common-words-counter.txt')
+EMBEDDINGS = os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'embeddings.npy')
+PHOTO_TOPIC = os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'photo_topic.txt')
+
+common_words_counter = pd.read_csv(COMMON_WORDS_COUNTER, header=None, sep=' ')
+embeddings = np.load(EMBEDDINGS)
+photo_topic = pd.read_csv(PHOTO_TOPIC, header=None, sep=' ')
+common_word_idx_map = dict(zip(common_words_counter.iloc[:, 0], range(common_words_counter.shape[0])))
+photo_topic_map = dict(zip(photo_topic.iloc[:, 0], photo_topic.iloc[:, 1]))
 
 
 def bench_k_means(estimator, name, data):
@@ -95,9 +105,18 @@ def modeling(pca_pic, pca_file, train_examples, Ks, model_name, batch_style_thre
     else:
         print('Viz Model has been built!')
 
+    print('Building basic features...')
     train_photo_examples_df = pd.read_csv(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, train_examples),
-                                          header=None, dtype=np.float32)
-    data = scale(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[1:]))
+                                          header=None)
+    scaler = MinMaxScaler()
+    data = scaler.fit_transform(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[1:]))
+    print('Building text features...')
+    text_features = np.ndarray(shape=(data.shape[0], embeddings.shape[1]))
+    for i, photo_id in enumerate(train_photo_examples_df.iloc[:, 0]):
+        topic = photo_topic_map[photo_id]
+        idx = common_word_idx_map[topic] if topic in common_word_idx_map.keys() else 0
+        text_features[i] = embeddings[idx]
+    data = np.hstack((data, text_features))
     print('Data size: ', data.shape)
     for K in Ks:
         print('\n' + '_' * 82)
@@ -140,7 +159,7 @@ def main():
     modeling_photos()
 
     # modeling users
-    modeling_users()
+    # modeling_users()
 
     print('Finished.')
 
