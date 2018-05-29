@@ -2,6 +2,7 @@ import os
 from operator import attrgetter
 
 from sklearn.externals import joblib
+from sklearn.preprocessing import MinMaxScaler
 
 import preprocessing_photos
 import numpy as np
@@ -82,8 +83,9 @@ def recommend():
                                 delimiter=',')
     train_photo_examples_df = pd.read_csv(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'train_photo_examples.txt'),
                                           header=None, dtype=np.float32)
-    train_dataset, mu, sigma = feature_normalize(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[1:]))
-    norm_dataset, _ , _ = feature_normalize(photo_examples[:, 1:], mu, sigma)
+    scaler = MinMaxScaler()
+    scaler.fit(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[1:]))
+    norm_dataset = scaler.transform(photo_examples[:, 1:])
 
     photo_features_map = dict()
     for i in range(photo_examples.shape[0]):
@@ -95,13 +97,14 @@ def recommend():
     magician_predicts_map = dict()
     for rank, magician in enumerate(magicians):
         magician_predicts_map[magician.name] = open(os.path.join(preprocessing_photos.DATA_HOUSE_PATH,
-                                                                 'v0.1.0-' + str(rank) + '_' + magician.name), 'w')
+                                                                 'v0.9.0-' + str(rank) + '_' + magician.name), 'w')
 
     with open(os.path.join(preprocessing_photos.RAW_DATA_PATH, 'test_interaction.txt'), 'r') as predict_data:
         tot_cnt = 0
-        cnt_ori_photo = 0
+        cnt_unk_photo = 0
         cnt_existed_photo = 0
         cnt_predict_photo = 0
+        cnt_new_user = 0
         for line in predict_data:
             line = line.strip()
             segs = line.split()
@@ -109,27 +112,30 @@ def recommend():
             photo_id = int(segs[1])
             for magician in magicians:
                 tot_cnt += 1
-                if photo_id in magician.photo_cate_map.keys():
-                    cate_id = magician.photo_cate_map[photo_id]
-                    cnt_existed_photo += 1
-                elif photo_id in photo_features_map.keys():
-                    cate_id = magician.photo_kmeans.predict(np.array([photo_features_map[photo_id]]))[0]
-                    cnt_predict_photo += 1
-                else:
-                    cate_id = None
-                    cnt_ori_photo += 1
-
-                if cate_id is None:  # Only show in text info.
-                    click_probability = 0.0
-                elif user_id not in magician.user_matrix_map:
+                if user_id not in magician.user_matrix_map:
                     click_probability = magician.fashion[cate_id]
+                    cnt_new_user += 1
                 else:
-                    matrix_idx = magician.user_matrix_map[user_id]
-                    click_probability = magician.matrix[matrix_idx, cate_id]
+                    if photo_id in magician.photo_cate_map.keys():
+                        cate_id = magician.photo_cate_map[photo_id]
+                        cnt_existed_photo += 1
+                    elif photo_id in photo_features_map.keys():
+                        cate_id = magician.photo_kmeans.predict(np.array([photo_features_map[photo_id]]))[0]
+                        cnt_predict_photo += 1
+                    else:
+                        cate_id = None
+                        cnt_unk_photo += 1
+
+                    if cate_id is None:
+                        click_probability = 0.0
+                    else:
+                        matrix_idx = magician.user_matrix_map[user_id]
+                        click_probability = magician.matrix[matrix_idx, cate_id]
+
                 magician_predicts_map[magician.name].write('%d\t%d\t%.6f\n' % (user_id, photo_id, click_probability))
                 magician_predicts_map[magician.name].flush()
-        print('#existed={}, #predict={}, #origin={}, #total={}\n'
-              .format(cnt_existed_photo, cnt_predict_photo, cnt_ori_photo, tot_cnt)
+        print('#new users={}, #existed={}, #predict={}, #unknown={}, #total={}\n'
+              .format(cnt_new_user, cnt_existed_photo, cnt_predict_photo, cnt_unk_photo, tot_cnt)
               )
 
 

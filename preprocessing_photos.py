@@ -86,6 +86,7 @@ def build_photo_examples(face_filename, text_filename, example_filename):
 def main():
     if not os.path.exists(CLEAN_DATA_PATH):
         os.makedirs(CLEAN_DATA_PATH)
+    # XXX Add text features
     if not os.path.exists(os.path.join(CLEAN_DATA_PATH, 'train_photo_examples.txt')):
         build_photo_examples(os.path.join(RAW_DATA_PATH, 'train_face.txt'),
                              None,

@@ -17,7 +17,8 @@ def build_pop_examples(interact_filename, photo_model, example_filename):
         photo_id_label[int(photo_id)] = kmeans.labels_[idx]
     with open(interact_filename, 'r') as interact_file:
         cnt = 0
-        num_filter = 0
+        num_filter_missing = 0
+        num_filter_pic = 0
         for line in interact_file:
             cnt += 1
             if cnt % 10000 == 0:
@@ -38,14 +39,18 @@ def build_pop_examples(interact_filename, photo_model, example_filename):
                     features = examples[user_id]
                 else:
                     features = np.zeros(shape=[n_clusters], dtype=np.float32)
-                # TODO
-                if (photo_id not in photo_id_label.keys()) or duration_time == 0:
-                    num_filter += 1
+
+                if photo_id not in photo_id_label.keys():
+                    num_filter_missing += 1
                     continue
+                if duration_time == 0:
+                    num_filter_pic += 1
+                    continue
+
                 cate_id = photo_id_label[photo_id]
                 # weighted behaviors
-                # Recently priming with timestamp weight. belongs to [1, 2]
-                time_weight = min(max(1.0, math.log10(1.0 * show_time / sys.maxsize) + 9), 2.0)
+                # Recently priming with timestamp weight. belongs to [1, +inf]
+                time_weight = max(1.0, math.log10(1.0 * show_time / sys.maxsize) + 9)
                 if click == 0 and like == 0 and follow == 0:
                     bonus = -1
                 else:
@@ -62,7 +67,7 @@ def build_pop_examples(interact_filename, photo_model, example_filename):
                 example_file.write(line)
                 example_file.write('\n')
                 example_file.flush()
-        return cnt, num_filter, len(examples)
+        return cnt, num_filter_missing, num_filter_pic, len(examples)
 
 def main():
     K1s = [10, 30, 100, 300, 1000]
@@ -75,7 +80,7 @@ def main():
 
     print('Examples building finished.')
     for tup in num_process_stats:
-        print('interacts #total: {}, #filtered: {}; #users: {}'.format(tup[0], tup[1], tup[2]))
+        print('interacts #total: {}, #filtered for missing: {}, #filtered for pic: {}, #users: {}'.format(tup[0], tup[1], tup[2], tup[3]))
 
 
 if __name__ == '__main__':
