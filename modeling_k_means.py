@@ -17,17 +17,6 @@ import datetime
 now = datetime.datetime.now()
 np.random.seed(now.second)
 
-COMMON_WORDS_COUNTER = os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'common-words-counter.txt')
-EMBEDDINGS = os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'embeddings.npy')
-PHOTO_TOPIC = os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'photo_topic.txt')
-
-common_words_counter = pd.read_csv(COMMON_WORDS_COUNTER, header=None, sep=' ')
-embeddings = np.load(EMBEDDINGS)
-photo_topic = pd.read_csv(PHOTO_TOPIC, header=None, sep=' ')
-common_word_idx_map = dict(zip(common_words_counter.iloc[:, 0], range(common_words_counter.shape[0])))
-# TODO train and test all in here
-photo_topic_map = dict(zip(photo_topic.iloc[:, 0], photo_topic.iloc[:, 1]))
-
 
 def bench_k_means(estimator, name, data):
     t0 = time()
@@ -110,26 +99,9 @@ def modeling(pca_pic, pca_file, train_examples, Ks, model_name, batch_style_thre
     train_photo_examples_df = pd.read_csv(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, train_examples),
                                           header=None)
     scaler = MinMaxScaler()
-    face_matrix = scaler.fit_transform(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[1:]))
-    face_idx_map = dict(zip(train_photo_examples_df.iloc[:, 0], range(train_photo_examples_df.shape[0])))
+    data = scaler.fit_transform(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[1:]))
+    print('Data size: ', data.shape)
 
-    print('Building features which combine text and face....')
-    text_features = np.ndarray(shape=(len(photo_topic_map), embeddings.shape[1]))
-    face_features = np.ndarray(shape=(len(photo_topic_map), face_matrix.shape[1]))
-    i = 0
-    num_face_missing = 0
-    for photo_id, topic in photo_topic_map.items():
-        idx = common_word_idx_map[topic] if topic in common_word_idx_map.keys() else 0
-        text_features[i] = embeddings[idx]
-        face_idx = face_idx_map[photo_id] if photo_id in face_idx_map.keys() else None
-        if face_idx is None:
-            face_features[i] = np.zeros(shape=(face_matrix.shape[1]))
-            num_face_missing += 1
-        else:
-            face_features[i] = face_matrix[face_idx]
-        i += 1
-    data = np.hstack((face_features, text_features))
-    print('Data size: ', data.shape, '\nNumber of Missing face features: ', num_face_missing)
     for K in Ks:
         print('\n' + '_' * 82)
         print('Modeling K={}...'.format(K))
@@ -166,15 +138,15 @@ def modeling_users():
                  )
 
 
-def main():
+def main(logger=None):
     # modeling photos
     modeling_photos()
 
     # modeling users
     # modeling_users()
 
-    print('Finished.')
-
+    # print('Finished.')
+    logger.write('Finished.' + '\n')
 
 if __name__ == '__main__':
     main()

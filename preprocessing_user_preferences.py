@@ -69,7 +69,7 @@ def build_pop_examples(interact_filename, photo_model, example_filename):
                 example_file.flush()
         return cnt, num_filter_missing, num_filter_pic, len(examples)
 
-def main():
+def main(logger=None):
     K1s = [10, 30, 100, 300, 1000]
     num_process_stats = list()
     for K1 in K1s:
@@ -78,9 +78,11 @@ def main():
                            os.path.join(preprocessing_photos.CLEAN_DATA_PATH,
                                         'pop_examples-{}.txt'.format(K1))))
 
-    print('Examples building finished.')
+    # print('Examples building finished.')
+    logger.write('Examples building finished.' + '\n')
     for tup in num_process_stats:
-        print('interacts #total: {}, #filtered for missing: {}, #filtered for pic: {}, #users: {}'.format(tup[0], tup[1], tup[2], tup[3]))
+        # print('interacts #total: {}, #filtered for missing: {}, #filtered for pic: {}, #users: {}'.format(tup[0], tup[1], tup[2], tup[3]))
+        logger.write('interacts #total: {}, #filtered for missing: {}, #filtered for pic: {}, #users: {}'.format(tup[0], tup[1], tup[2], tup[3]) + '\n')
 
 
 if __name__ == '__main__':

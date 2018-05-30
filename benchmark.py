@@ -118,7 +118,6 @@ out.flush()
 
 # In[6]:
 
-# XXX
 scaler = MinMaxScaler()
 # one column with sparse discrete values to multiple column with 0/1 values.
 # enc = OneHotEncoder()

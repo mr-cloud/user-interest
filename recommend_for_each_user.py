@@ -20,7 +20,7 @@ class Magician():
         for idx, photo_id in enumerate(photo_kmeans.examples_id_):
             self.photo_cate_map[int(photo_id)] = photo_kmeans.labels_[idx]
 
-        # normalization: shift and standardization TODO
+        # normalization: shift and standardization (e.g., MinMax with normalization)
         inf = np.min(prefers, axis=1)
         sup = np.max(prefers, axis=1)
         matrix = (prefers.transpose() - inf) / (sup - inf)
@@ -44,15 +44,7 @@ class Magician():
         return 'K1={}, total inertia={}'.format(self.K1, self.total_inertia)
 
 
-def feature_normalize(dataset, mu=None, sigma=None):
-    if mu is None:
-        mu = np.mean(dataset, axis=0)
-    if sigma is None:
-        sigma = np.std(dataset, axis=0) + 0.1  # in case zero division.
-    return (dataset - mu) / sigma, mu, sigma
-
-
-def recommend():
+def recommend(sub_prefix, logger=None):
     print('Loading moldes...')
     photo_model_prefix = 'photo-'
     pop_examples_prefix = 'pop_examples-'
@@ -63,13 +55,9 @@ def recommend():
             first_sep = file.index('-')
             second_sep = file.rindex('.')
             K1 = int(file[first_sep + 1: second_sep])
-            examples = np.loadtxt(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, pop_examples_prefix + str(K1) + '.txt'),
+            pop_examples = np.loadtxt(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, pop_examples_prefix + str(K1) + '.txt'),
                                   delimiter=',')
-            pop_examples = dict()
-            for i in range(examples.shape[0]):
-                user_id = int(examples[i, 0])
-                pop_examples[user_id] = examples[i, 1:]
-            magicians.append(Magician(photo_kmeans, K1, examples))
+            magicians.append(Magician(photo_kmeans, K1, pop_examples))
     print('{} models loaded.'.format(len(magicians)))
     # sorting models by multiplication of inertia
     magicians.sort(key=attrgetter('total_inertia'))
@@ -85,19 +73,15 @@ def recommend():
                                           header=None, dtype=np.float32)
     scaler = MinMaxScaler()
     scaler.fit(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[1:]))
-    norm_dataset = scaler.transform(photo_examples[:, 1:])
-
-    photo_features_map = dict()
-    for i in range(photo_examples.shape[0]):
-        photo_id = int(photo_examples[i, 0])
-        photo_features_map[photo_id] = norm_dataset[i]
+    data = scaler.transform(photo_examples[:, 1:])
+    photo_idx_map = dict(zip(photo_examples[:, 0], range(photo_examples.shape[0])))
 
     # inference
     print('Inferring..')
     magician_predicts_map = dict()
     for rank, magician in enumerate(magicians):
         magician_predicts_map[magician.name] = open(os.path.join(preprocessing_photos.DATA_HOUSE_PATH,
-                                                                 'v0.9.0-' + str(rank) + '_' + magician.name), 'w')
+                                                                 sub_prefix + '-' + str(rank) + '_' + magician.name), 'w')
 
     with open(os.path.join(preprocessing_photos.RAW_DATA_PATH, 'test_interaction.txt'), 'r') as predict_data:
         tot_cnt = 0
@@ -119,10 +103,11 @@ def recommend():
                     if photo_id in magician.photo_cate_map.keys():
                         cate_id = magician.photo_cate_map[photo_id]
                         cnt_existed_photo += 1
-                    elif photo_id in photo_features_map.keys():
-                        cate_id = magician.photo_kmeans.predict(np.array([photo_features_map[photo_id]]))[0]
+                    elif photo_id in photo_idx_map.keys():  # Almost examples should hit here.
+                        features = data[photo_idx_map[photo_id]]
+                        cate_id = magician.photo_kmeans.predict(np.array([features]))[0]
                         cnt_predict_photo += 1
-                    else:
+                    else:  # No example should hit here.
                         cate_id = None
                         cnt_unk_photo += 1
 
@@ -134,17 +119,21 @@ def recommend():
 
                 magician_predicts_map[magician.name].write('%d\t%d\t%.6f\n' % (user_id, photo_id, click_probability))
                 magician_predicts_map[magician.name].flush()
-        print('#new users={}, #existed={}, #predict={}, #unknown={}, #total={}\n'
+        # print('#new users={}, #existed={}, #predict={}, #unknown={}, #total={}\n'
+        #       .format(cnt_new_user, cnt_existed_photo, cnt_predict_photo, cnt_unk_photo, tot_cnt)
+        #       )
+        logger.write('#new users={}, #existed={}, #predict={}, #unknown={}, #total={}\n'
               .format(cnt_new_user, cnt_existed_photo, cnt_predict_photo, cnt_unk_photo, tot_cnt)
-              )
+                     + '\n')
 
 
 
 
-def main():
-    recommend()
-    print('Finished.')
+def main(sub_prefix, logger=None):
+    recommend(sub_prefix, logger)
+    # print('Finished.')
+    logger.write('Finished.' + '\n')
 
 
 if __name__ == '__main__':
-    main()
+    main('v0.9.0')
