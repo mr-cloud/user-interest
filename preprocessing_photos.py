@@ -9,7 +9,7 @@ import pandas as pd
 
 from utils import logger
 
-DATA_HOUSE_PATH = 'datahouse'
+DATA_HOUSE_PATH = '/home/leo/hdd-vmshare/user-interest/datahouse'
 CLEAN_DATA_PATH = DATA_HOUSE_PATH + '/clean-data'
 RAW_DATA_PATH = DATA_HOUSE_PATH + '/raw-data'
 NUM_FACE_FEATURE = 5
@@ -26,36 +26,27 @@ photo_topic_map = dict(zip(photo_topic.iloc[:, 0], photo_topic.iloc[:, 1]))
 
 
 def store(example_filename, NUM_TEXT_FEATURE, photos_id, face_info, text_info_photos):
-    with open(example_filename, 'w') as example_file:
-        cnt = 0
-        num_unfound_photo = 0
-        for photo_id in photos_id:
-            cnt += 1
-            if cnt % 10000 == 0:
-                print('Generating {}: {}'.format(example_filename, cnt))
-            if photo_id in face_info.keys():
-                face_features = face_info[photo_id]
+    cnt = 0
+    num_unfound_photo = 0
+    examples = np.zeros(shape=(len(photos_id, 1 + NUM_FACE_FEATURE + NUM_TEXT_FEATURE)), dtype=np.float16)
+    examples[:, 0] = list(photos_id)
+    for exam_idx, photo_id in enumerate(photos_id):
+        if cnt % 10000 == 0:
+            print('Generating {}: {}'.format(example_filename, cnt))
+        if photo_id in face_info.keys():
+            examples[exam_idx, 1: NUM_FACE_FEATURE + 1] = face_info[photo_id]
+        if photo_id in text_info_photos:
+            topic = photo_topic_map[photo_id]
+            if NUM_TEXT_FEATURE == 1:
+                examples[exam_idx, NUM_FACE_FEATURE + 1:] = [topic]
             else:
-                face_features = [0] * NUM_FACE_FEATURE
-            if photo_id in text_info_photos:
-                topic = photo_topic_map[photo_id]
-                if NUM_TEXT_FEATURE == 1:
-                    text_features = [topic]
-                else:
-                    idx = common_word_idx_map[topic] if topic in common_word_idx_map.keys() else 0
-                    text_features = embeddings[idx]
-            else:
-                text_features = [0] * NUM_TEXT_FEATURE
-                num_unfound_photo += 1
-            line = str(photo_id)
-            for ele in face_features:
-                line += ',' + str(ele)
-            for ele in text_features:
-                line += ',' + str(ele)
-            example_file.write(line)
-            example_file.write('\n')
-            example_file.flush()
-        logger.write('#Unfound photo: {}'.format(num_unfound_photo) + '\n')
+                idx = common_word_idx_map[topic] if topic in common_word_idx_map.keys() else 0
+                examples[exam_idx, NUM_FACE_FEATURE + 1:] = embeddings[idx]
+        else:
+            num_unfound_photo += 1
+        cnt += 1
+    np.save(example_filename, examples)
+    logger.write('#Unfound photo: {}'.format(num_unfound_photo) + '\n')
 
 
 def build_photo_examples(face_filename, text_filename, example_filename_prefix):
@@ -103,8 +94,8 @@ def build_photo_examples(face_filename, text_filename, example_filename_prefix):
     # print('#photos in total = {}'.format(len(photos_id)))
     logger.write('#photos in total = {}'.format(len(photos_id)) + '\n')
 
-    store(example_filename_prefix + '.txt', embeddings.shape[1], photos_id, face_info, text_info_photos, logger)
-    store(example_filename_prefix + '-topic.txt', 1, photos_id, face_info, text_info_photos, logger)
+    store(example_filename_prefix + '-topic.npy', 1, photos_id, face_info, text_info_photos)
+    store(example_filename_prefix + '.npy', embeddings.shape[1], photos_id, face_info, text_info_photos)
 
 
 def main():
@@ -112,12 +103,10 @@ def main():
         os.makedirs(CLEAN_DATA_PATH)
     build_photo_examples(os.path.join(RAW_DATA_PATH, 'train_face.txt'),
                          os.path.join(RAW_DATA_PATH, 'train_text.txt'),
-                         os.path.join(CLEAN_DATA_PATH, 'train_photo_examples'),
-                         logger)
+                         os.path.join(CLEAN_DATA_PATH, 'train_photo_examples'))
     build_photo_examples(os.path.join(RAW_DATA_PATH, 'test_face.txt'),
                          os.path.join(RAW_DATA_PATH, 'test_text.txt'),
-                         os.path.join(CLEAN_DATA_PATH, 'test_photo_examples'),
-                         logger)
+                         os.path.join(CLEAN_DATA_PATH, 'test_photo_examples'))
     # print('Finished.')
     logger.write('Finished.' + '\n')
 

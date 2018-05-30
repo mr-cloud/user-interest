@@ -86,9 +86,8 @@ def build_model_with_batch(data, K, name='k-means++', batch_size = 100, num_iter
 
 def modeling(pca_pic, pca_file, train_examples, Ks, model_name, batch_style_threshold=sys.maxsize, batch_size=1000, num_iter=1000, init_size=10000, n_init=3, max_no_improvement=30):
     if not os.path.exists(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, pca_pic)):
-        test_photo_examples_df = pd.read_csv(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, pca_file),
-                                             header=None, dtype=np.float32)
-        data = scale(test_photo_examples_df.as_matrix(columns=test_photo_examples_df.columns[1:]))
+        test_photo_examples = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, pca_file))
+        data = scale(test_photo_examples[:, 1:])
         K_viz = 10
         print('Started PCA exploring...')
         viz_data(data, K_viz, os.path.join(preprocessing_photos.DATA_HOUSE_PATH, pca_pic))
@@ -97,10 +96,9 @@ def modeling(pca_pic, pca_file, train_examples, Ks, model_name, batch_style_thre
         print('Viz Model has been built!')
 
     print('Building basic features...')
-    train_photo_examples_df = pd.read_csv(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, train_examples),
-                                          header=None)
+    train_photo_examples = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, train_examples))
     scaler = MinMaxScaler()
-    data = scaler.fit_transform(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[1:]))
+    data = scaler.fit_transform(train_photo_examples[:, 1:])
     print('Data size: ', data.shape)
 
     for K in Ks:
@@ -110,14 +108,14 @@ def modeling(pca_pic, pca_file, train_examples, Ks, model_name, batch_style_thre
             estimator = build_model_with_batch(data, K, batch_size=batch_size, num_iter=num_iter, init_size=init_size, n_init=n_init, max_no_improvement=max_no_improvement)
         else:
             estimator = build_model(data, K)
-        estimator.examples_id_ = np.reshape(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[0:1]), newshape=[-1])
+        estimator.examples_id_ = np.reshape(train_photo_examples.as_matrix(columns=train_photo_examples.columns[0:1]), newshape=[-1])
         print('Saving model K={}...'.format(K))
         joblib.dump(estimator, os.path.join(preprocessing_photos.DATA_HOUSE_PATH, model_name.format(K)))
         print('_' * 82 + '\n')
 
 
 def modeling_photos():
-    modeling('pca-reduced.jpg', 'test_photo_examples.txt', 'train_photo_examples.txt', [10, 30, 100, 300, 1000], 'photo-{}.pkl', 1)
+    modeling('pca-reduced.jpg', 'test_photo_examples.npy', 'train_photo_examples.npy', [10, 30, 100, 300, 1000], 'photo-{}.pkl', 1)
 
 
 def modeling_users():

@@ -69,12 +69,10 @@ def recommend(sub_prefix):
 
     # normalization
     print('Normalizing dataset...')
-    photo_examples = np.loadtxt(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'test_photo_examples.txt'),
-                                delimiter=',')
-    train_photo_examples_df = pd.read_csv(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'train_photo_examples.txt'),
-                                          header=None, dtype=np.float32)
+    photo_examples = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'test_photo_examples.npy'))
+    train_photo_examples = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'train_photo_examples.npy'))
     scaler = MinMaxScaler()
-    scaler.fit(train_photo_examples_df.as_matrix(columns=train_photo_examples_df.columns[1:]))
+    scaler.fit(train_photo_examples[:, 1:])
     data = scaler.transform(photo_examples[:, 1:])
     photo_idx_map = dict(zip(photo_examples[:, 0], range(photo_examples.shape[0])))
 
@@ -132,7 +130,7 @@ def recommend(sub_prefix):
 
 
 def main(sub_prefix):
-    recommend(sub_prefix, logger)
+    recommend(sub_prefix)
     # print('Finished.')
     logger.write('Finished.' + '\n')
 
