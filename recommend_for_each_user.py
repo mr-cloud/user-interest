@@ -8,6 +8,8 @@ import preprocessing_photos
 import numpy as np
 import pandas as pd
 
+from utils import logger
+
 
 class Magician():
 
@@ -44,7 +46,7 @@ class Magician():
         return 'K1={}, total inertia={}'.format(self.K1, self.total_inertia)
 
 
-def recommend(sub_prefix, logger=None):
+def recommend(sub_prefix):
     print('Loading moldes...')
     photo_model_prefix = 'photo-'
     pop_examples_prefix = 'pop_examples-'
@@ -129,7 +131,7 @@ def recommend(sub_prefix, logger=None):
 
 
 
-def main(sub_prefix, logger=None):
+def main(sub_prefix):
     recommend(sub_prefix, logger)
     # print('Finished.')
     logger.write('Finished.' + '\n')

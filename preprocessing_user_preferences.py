@@ -6,6 +6,8 @@ import sys
 
 import preprocessing_photos
 
+from utils import logger
+
 
 def build_pop_examples(interact_filename, photo_model, example_filename):
     # load model
@@ -69,7 +71,7 @@ def build_pop_examples(interact_filename, photo_model, example_filename):
                 example_file.flush()
         return cnt, num_filter_missing, num_filter_pic, len(examples)
 
-def main(logger=None):
+def main():
     K1s = [10, 30, 100, 300, 1000]
     num_process_stats = list()
     for K1 in K1s:

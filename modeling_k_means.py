@@ -13,6 +13,7 @@ from sklearn.externals import joblib
 import preprocessing_photos
 import datetime
 
+from utils import logger
 
 now = datetime.datetime.now()
 np.random.seed(now.second)
@@ -138,7 +139,7 @@ def modeling_users():
                  )
 
 
-def main(logger=None):
+def main():
     # modeling photos
     modeling_photos()
 
