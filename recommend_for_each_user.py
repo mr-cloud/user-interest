@@ -54,6 +54,7 @@ def recommend(sub_prefix):
     for file in os.listdir(preprocessing_photos.DATA_HOUSE_PATH):
         if file.startswith(photo_model_prefix):
             photo_kmeans = joblib.load(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, file))
+            photo_kmeans.verbose = 0
             first_sep = file.index('-')
             second_sep = file.rindex('.')
             K1 = int(file[first_sep + 1: second_sep])
@@ -77,10 +78,12 @@ def recommend(sub_prefix):
     scaler.fit(train_photo_examples[:, 1:])
     data = scaler.transform(photo_examples[:, 1:])
     photo_idx_map = dict(zip(np.array(photo_examples[:, 0], dtype=int), range(photo_examples.shape[0])))
+    del train_photo_examples
 
     # inference
     print('Inferring..')
     magician_predicts_map = dict()
+    # XXX use array to store the results.
     for rank, magician in enumerate(magicians):
         magician_predicts_map[magician.name] = open(os.path.join(preprocessing_photos.DATA_HOUSE_PATH,
                                                                  sub_prefix + '-' + str(rank) + '_' + magician.name), 'w')
