@@ -20,4 +20,5 @@ logger.write('{}: {}\n'.format(datetime.datetime.now(), 'Started recommend_for_e
 logger.flush()
 recommend_for_each_user.main('v0.9.0')
 logger.write('{}: {}\n'.format(datetime.datetime.now(), 'Finished'))
+logger.flush()
 

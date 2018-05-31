@@ -33,7 +33,7 @@ class Magician():
             self.user_matrix_map[user_id] = idx
 
         # Cold starting
-        fashion = np.mean(photo_kmeans.cluster_centers_, axis=0)
+        fashion = np.sum(photo_kmeans.cluster_centers_, axis=0)
         fashion = (fashion - np.min(fashion)) / (np.max(fashion) - np.min(fashion))
         self.fashion = fashion / np.sum(fashion)
 
@@ -76,8 +76,7 @@ def recommend(sub_prefix):
     scaler = MinMaxScaler()
     scaler.fit(train_photo_examples[:, 1:])
     data = scaler.transform(photo_examples[:, 1:])
-    # TODO convert into int
-    photo_idx_map = dict(zip(photo_examples[:, 0], range(photo_examples.shape[0])))
+    photo_idx_map = dict(zip(np.array(photo_examples[:, 0], dtype=int), range(photo_examples.shape[0])))
 
     # inference
     print('Inferring..')
@@ -100,7 +99,7 @@ def recommend(sub_prefix):
             for magician in magicians:
                 tot_cnt += 1
                 if user_id not in magician.user_matrix_map:
-                    click_probability = magician.fashion[cate_id]
+                    click_probability = max(magician.fashion)
                     cnt_new_user += 1
                 else:
                     if photo_id in magician.photo_cate_map.keys():
@@ -125,9 +124,8 @@ def recommend(sub_prefix):
         # print('#new users={}, #existed={}, #predict={}, #unknown={}, #total={}\n'
         #       .format(cnt_new_user, cnt_existed_photo, cnt_predict_photo, cnt_unk_photo, tot_cnt)
         #       )
-        logger.write('#new users={}, #existed={}, #predict={}, #unknown={}, #total={}\n'
-              .format(cnt_new_user, cnt_existed_photo, cnt_predict_photo, cnt_unk_photo, tot_cnt)
-                     + '\n')
+        logger.write('#new users={}, #existed={}, #predict={}, #new photos beyond train and test dataset={}, #total={}\n'
+              .format(cnt_new_user, cnt_existed_photo, cnt_predict_photo, cnt_unk_photo, tot_cnt))
 
 
 
