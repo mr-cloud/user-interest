@@ -59,6 +59,8 @@ def recommend(sub_prefix):
             K1 = int(file[first_sep + 1: second_sep])
             pop_examples = np.loadtxt(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, pop_examples_prefix + str(K1) + '.txt'),
                                   delimiter=',')
+            if len(pop_examples.shape) == 1:
+                pop_examples = pop_examples.reshape(-1, pop_examples.shape[0])
             magicians.append(Magician(photo_kmeans, K1, pop_examples))
     print('{} models loaded.'.format(len(magicians)))
     # sorting models by multiplication of inertia
@@ -74,6 +76,7 @@ def recommend(sub_prefix):
     scaler = MinMaxScaler()
     scaler.fit(train_photo_examples[:, 1:])
     data = scaler.transform(photo_examples[:, 1:])
+    # TODO convert into int
     photo_idx_map = dict(zip(photo_examples[:, 0], range(photo_examples.shape[0])))
 
     # inference
@@ -83,7 +86,7 @@ def recommend(sub_prefix):
         magician_predicts_map[magician.name] = open(os.path.join(preprocessing_photos.DATA_HOUSE_PATH,
                                                                  sub_prefix + '-' + str(rank) + '_' + magician.name), 'w')
 
-    with open(os.path.join(preprocessing_photos.RAW_DATA_PATH, 'test_interaction.txt'), 'r') as predict_data:
+    with open(os.path.join(preprocessing_photos.RAW_DATA_PATH, preprocessing_photos.DATASET_TEST_INTERACTION), 'r') as predict_data:
         tot_cnt = 0
         cnt_unk_photo = 0
         cnt_existed_photo = 0

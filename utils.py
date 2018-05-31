@@ -1,4 +1,7 @@
 import os
 
 
-logger = open(os.path.join('datahouse', 'all-in.log'), 'w')
+log_dir = 'datahouse'
+if not os.path.exists(log_dir):
+    os.mkdir(log_dir)
+logger = open(os.path.join(log_dir, 'all-in.log'), 'w')

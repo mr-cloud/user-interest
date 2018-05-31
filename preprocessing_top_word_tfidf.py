@@ -20,7 +20,7 @@ def load_data(filenames, prefix):
     return corpus, photos_id
 
 
-filenames = ['train_text.txt', 'test_text.txt']
+filenames = [preprocessing_photos.DATASET_TRAIN_TEXT, preprocessing_photos.DATASET_TEST_TEXT]
 # filenames = ['sample_train_text.txt']
 prefix = preprocessing_photos.RAW_DATA_PATH
 corpus, photos_id = load_data(filenames, prefix)

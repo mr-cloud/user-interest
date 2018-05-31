@@ -75,7 +75,7 @@ def main():
     K1s = [10, 30, 100, 300, 1000]
     num_process_stats = list()
     for K1 in K1s:
-        num_process_stats.append(build_pop_examples(os.path.join(preprocessing_photos.RAW_DATA_PATH, 'train_interaction.txt'),
+        num_process_stats.append(build_pop_examples(os.path.join(preprocessing_photos.RAW_DATA_PATH, preprocessing_photos.DATASET_TRAIN_INTERACTION),
                            os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'photo-{}.pkl'.format(K1)),
                            os.path.join(preprocessing_photos.CLEAN_DATA_PATH,
                                         'pop_examples-{}.txt'.format(K1))))
@@ -84,7 +84,7 @@ def main():
     logger.write('Examples building finished.' + '\n')
     for tup in num_process_stats:
         # print('interacts #total: {}, #filtered for missing: {}, #filtered for pic: {}, #users: {}'.format(tup[0], tup[1], tup[2], tup[3]))
-        logger.write('interacts #total: {}, #filtered for missing: {}, #filtered for pic: {}, #users: {}'.format(tup[0], tup[1], tup[2], tup[3]) + '\n')
+        logger.write('interacts #total: {}, #filtered for missing in trained photos: {}, #filtered for duration time is 0: {}; #users for preferences: {}'.format(tup[0], tup[1], tup[2], tup[3]) + '\n')
 
 
 if __name__ == '__main__':

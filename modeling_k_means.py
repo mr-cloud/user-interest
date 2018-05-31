@@ -108,7 +108,7 @@ def modeling(pca_pic, pca_file, train_examples, Ks, model_name, batch_style_thre
             estimator = build_model_with_batch(data, K, batch_size=batch_size, num_iter=num_iter, init_size=init_size, n_init=n_init, max_no_improvement=max_no_improvement)
         else:
             estimator = build_model(data, K)
-        estimator.examples_id_ = np.reshape(train_photo_examples.as_matrix(columns=train_photo_examples.columns[0:1]), newshape=[-1])
+        estimator.examples_id_ = train_photo_examples[:, 0]
         print('Saving model K={}...'.format(K))
         joblib.dump(estimator, os.path.join(preprocessing_photos.DATA_HOUSE_PATH, model_name.format(K)))
         print('_' * 82 + '\n')

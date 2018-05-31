@@ -13,7 +13,7 @@ import preprocessing_photos
 
 
 
-filenames = ['train_text.txt', 'test_text.txt']
+filenames = [preprocessing_photos.DATASET_TRAIN_TEXT, preprocessing_photos.DATASET_TEST_TEXT]
 
 
 def read_data(filenames, path_prefix):

@@ -12,6 +12,13 @@ from utils import logger
 DATA_HOUSE_PATH = '/home/leo/hdd-vmshare/user-interest/datahouse'
 CLEAN_DATA_PATH = DATA_HOUSE_PATH + '/clean-data'
 RAW_DATA_PATH = DATA_HOUSE_PATH + '/raw-data'
+DATASET_TEST_FACE = 'sample_test_face.txt'
+DATASET_TEST_INTERACTION = 'sample_test_interaction.txt'
+DATASET_TEST_TEXT = 'sample_test_text.txt'
+DATASET_TRAIN_FACE = 'sample_train_face.txt'
+DATASET_TRAIN_INTERACTION = 'sample_train_interaction.txt'
+DATASET_TRAIN_TEXT = 'sample_train_text.txt'
+
 NUM_FACE_FEATURE = 5
 
 COMMON_WORDS_COUNTER = os.path.join(CLEAN_DATA_PATH, 'common-words-counter.txt')
@@ -28,7 +35,7 @@ photo_topic_map = dict(zip(photo_topic.iloc[:, 0], photo_topic.iloc[:, 1]))
 def store(example_filename, NUM_TEXT_FEATURE, photos_id, face_info, text_info_photos):
     cnt = 0
     num_unfound_photo = 0
-    examples = np.zeros(shape=(len(photos_id, 1 + NUM_FACE_FEATURE + NUM_TEXT_FEATURE)), dtype=np.float16)
+    examples = np.zeros(shape=(len(photos_id), 1 + NUM_FACE_FEATURE + NUM_TEXT_FEATURE), dtype=np.float32)
     examples[:, 0] = list(photos_id)
     for exam_idx, photo_id in enumerate(photos_id):
         if cnt % 10000 == 0:
@@ -101,11 +108,11 @@ def build_photo_examples(face_filename, text_filename, example_filename_prefix):
 def main():
     if not os.path.exists(CLEAN_DATA_PATH):
         os.makedirs(CLEAN_DATA_PATH)
-    build_photo_examples(os.path.join(RAW_DATA_PATH, 'train_face.txt'),
-                         os.path.join(RAW_DATA_PATH, 'train_text.txt'),
+    build_photo_examples(os.path.join(RAW_DATA_PATH, DATASET_TRAIN_FACE),
+                         os.path.join(RAW_DATA_PATH, DATASET_TRAIN_TEXT),
                          os.path.join(CLEAN_DATA_PATH, 'train_photo_examples'))
-    build_photo_examples(os.path.join(RAW_DATA_PATH, 'test_face.txt'),
-                         os.path.join(RAW_DATA_PATH, 'test_text.txt'),
+    build_photo_examples(os.path.join(RAW_DATA_PATH, DATASET_TEST_FACE),
+                         os.path.join(RAW_DATA_PATH, DATASET_TEST_TEXT),
                          os.path.join(CLEAN_DATA_PATH, 'test_photo_examples'))
     # print('Finished.')
     logger.write('Finished.' + '\n')
