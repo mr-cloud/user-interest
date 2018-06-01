@@ -83,59 +83,68 @@ def recommend(sub_prefix):
     # inference
     print('Inferring..')
     magician_predicts_map = dict()
-    # XXX use array to store the results.
-    for rank, magician in enumerate(magicians):
-        magician_predicts_map[magician.name] = open(os.path.join(preprocessing_photos.DATA_HOUSE_PATH,
-                                                                 sub_prefix + '-' + str(rank) + '_' + magician.name), 'w')
 
-    with open(os.path.join(preprocessing_photos.RAW_DATA_PATH, preprocessing_photos.DATASET_TEST_INTERACTION), 'r') as predict_data:
-        tot_cnt = 0
-        cnt_unk_photo = 0
-        cnt_existed_photo = 0
-        cnt_predict_photo = 0
-        cnt_new_user = 0
-        for line in predict_data:
-            line = line.strip()
-            segs = line.split()
-            user_id = int(segs[0])
-            photo_id = int(segs[1])
-            for magician in magicians:
-                tot_cnt += 1
-                if user_id not in magician.user_matrix_map:
-                    click_probability = max(magician.fashion)
-                    cnt_new_user += 1
+    predict_data = pd.read_csv(os.path.join(preprocessing_photos.RAW_DATA_PATH, preprocessing_photos.DATASET_TEST_INTERACTION), delim_whitespace=True,
+                               header=None, names=['user_id', 'photo_id', 'time', 'duration_time'])
+    logger.write('Predict data size: {}'.format(predict_data.shape[0]) + '\n')
+
+    # os.path.join(preprocessing_photos.DATA_HOUSE_PATH, sub_prefix + '-' + str(rank) + '_' + magician.name)
+    for magician in magicians:
+        magician_predicts_map[magician.name] = np.ndarray(shape=(predict_data.shape[0]), dtype=np.float32)
+
+    tot_cnt = 0
+    cnt_unk_photo = 0
+    cnt_existed_photo = 0
+    cnt_predict_photo = 0
+    cnt_new_user = 0
+    for i in range(predict_data.shape[0]):
+        user_id = predict_data.loc[i, 'user_id']
+        photo_id = predict_data.loc[i, 'photo_id']
+        for magician in magicians:
+            tot_cnt += 1
+            if user_id not in magician.user_matrix_map:
+                click_probability = max(magician.fashion)
+                cnt_new_user += 1
+            else:
+                if photo_id in magician.photo_cate_map.keys():
+                    cate_id = magician.photo_cate_map[photo_id]
+                    cnt_existed_photo += 1
+                elif photo_id in photo_idx_map.keys():  # Almost examples should hit here.
+                    features = data[photo_idx_map[photo_id]]
+                    cate_id = magician.photo_kmeans.predict(np.array([features]))[0]
+                    cnt_predict_photo += 1
+                else:  # No example should hit here.
+                    cate_id = None
+                    cnt_unk_photo += 1
+
+                if cate_id is None:
+                    click_probability = 0.0
                 else:
-                    if photo_id in magician.photo_cate_map.keys():
-                        cate_id = magician.photo_cate_map[photo_id]
-                        cnt_existed_photo += 1
-                    elif photo_id in photo_idx_map.keys():  # Almost examples should hit here.
-                        features = data[photo_idx_map[photo_id]]
-                        cate_id = magician.photo_kmeans.predict(np.array([features]))[0]
-                        cnt_predict_photo += 1
-                    else:  # No example should hit here.
-                        cate_id = None
-                        cnt_unk_photo += 1
+                    matrix_idx = magician.user_matrix_map[user_id]
+                    click_probability = magician.matrix[matrix_idx, cate_id]
 
-                    if cate_id is None:
-                        click_probability = 0.0
-                    else:
-                        matrix_idx = magician.user_matrix_map[user_id]
-                        click_probability = magician.matrix[matrix_idx, cate_id]
+            magician_predicts_map[magician.name][i] = click_probability
+        if i % 10000 == 0:
+            print('Predicted examples: {}'.format(i))
+    # print('#new users={}, #existed={}, #predict={}, #unknown={}, #total={}\n'
+    #       .format(cnt_new_user, cnt_existed_photo, cnt_predict_photo, cnt_unk_photo, tot_cnt)
+    #       )
+    logger.write('#new users={}, #existed={}, #predict={}, #new photos beyond train and test dataset={}, #total={}\n'
+          .format(cnt_new_user, cnt_existed_photo, cnt_predict_photo, cnt_unk_photo, tot_cnt))
 
-                magician_predicts_map[magician.name].write('%d\t%d\t%.6f\n' % (user_id, photo_id, click_probability))
-                magician_predicts_map[magician.name].flush()
-        # print('#new users={}, #existed={}, #predict={}, #unknown={}, #total={}\n'
-        #       .format(cnt_new_user, cnt_existed_photo, cnt_predict_photo, cnt_unk_photo, tot_cnt)
-        #       )
-        logger.write('#new users={}, #existed={}, #predict={}, #new photos beyond train and test dataset={}, #total={}\n'
-              .format(cnt_new_user, cnt_existed_photo, cnt_predict_photo, cnt_unk_photo, tot_cnt))
+    print('Saving prediction...')
+    for rank, magician in enumerate(magicians):
+        predict_data['click_prob'] = magician_predicts_map[magician.name]
+        predict_data.to_csv(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, sub_prefix + '-' + str(rank) + '_' + magician.name),
+                            columns=['user_id', 'photo_id', 'click_prob'],
+                            sep='\t', header=False, index=False, float_format='%.6f')
 
 
 
 
 def main(sub_prefix):
     recommend(sub_prefix)
-    # print('Finished.')
+    print('Finished.')
     logger.write('Finished.' + '\n')
 
 
