@@ -25,6 +25,9 @@ DATASET_TRAIN_FACE = 'train_face.txt'
 DATASET_TRAIN_INTERACTION = 'train_interaction.txt'
 DATASET_TRAIN_TEXT = 'train_text.txt'
 
+TRAIN_PHOTO_EXAMPLE_WITH_TOPIC = 'train_photo_examples-topic.npy'
+TEST_PHOTO_EXAMPLE_WITH_TOPIC = 'test_photo_examples-topic.npy'
+
 NUM_FACE_FEATURE = 5
 
 COMMON_WORDS_COUNTER = os.path.join(CLEAN_DATA_PATH, 'common-words-counter.txt')

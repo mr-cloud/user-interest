@@ -35,7 +35,7 @@
 
 预测：
 - 为用户、作品归类：<user_id, photo_id> -> <pop_id, cate_id>
-- 计算点击率：P{click} = pop_features[cate_id] mapped into [0, 1] **TODO: 不应该按列scale后，按行计算占比作为点击概率**
+- 计算点击率：P{click} = pop_features[cate_id] mapped into [0, 1]
 - 输出结果：<user_id, photo_id, click_probability>
 
 
@@ -45,7 +45,7 @@
 <user_id, photo_id, click> -> <user_id_count, user_click_oof, user_play_time_oof, duration_time, time, click>
 - 扩展feature
     - 用户相关
-        - user_id_count: 用户再训练集中出现的交互次数
+        - user_id_count: 用户在训练集中出现的交互次数
         - user_click_oof: click per show. 每次展现，用户平均点击动作的发生频率
         - user_play_time_oof: play time per click. 每次点击后，播放的时长
     - 作品相关
@@ -59,6 +59,7 @@
 
 ###监督学习 v2.0.0
 - 扩展作品相关feature
+    <user_id_count, user_click_oof, user_play_time_oof, duration_time, time, num_face, face_occu, gender_pref, age, looking, topic, click>
 - 模型使用集成学习算法 + GridSearch调优
 
 
