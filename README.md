@@ -59,7 +59,7 @@
 
 ###监督学习 v2.0.0
 - 扩展作品相关feature
-    <user_id_count, user_click_oof, user_play_time_oof, duration_time, time, num_face, face_occu, gender_pref, age, looking, topic, click>
+    <user_click_oof, user_play_time_oof, duration_time, time, num_face, face_occu, gender_pref, age, looking, topic, click>
 - 模型使用集成学习算法 + GridSearch调优
 
 
