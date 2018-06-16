@@ -11,13 +11,16 @@ import preprocessing_photos
 
 
 def metric(prediction, target):
-    return roc_auc_score(target, prediction[:, 1])
-
+    try:
+        return roc_auc_score(target, prediction[:, 1])
+    except ValueError:
+        return 1.0
 
 start = time.time()
 
 dataset = np.random.random_sample(size=(10000, 10))
-labels = np.random.randint(low=0, high=1, size=(10000,))
+labels = np.random.randint(low=0, high=2, size=(10000,))
+
 submission_dataset = np.random.random_sample(size=(10000, 10))
 
 test_interaction = pd.DataFrame()
@@ -27,8 +30,9 @@ test_interaction['photo_id'] = np.arange(submission_dataset.shape[0])
 train_dataset, test_dataset, train_labels, test_labels = train_test_split(dataset, labels)
 train_dataset, valid_dataset, train_labels, valid_labels = train_test_split(train_dataset, train_labels)
 
+n_label = 2
 n_dim = train_dataset.shape[1]
-num_epochs = 10
+num_epochs = 3
 batch_size = train_dataset.shape[0] // 1000
 num_steps = train_dataset.shape[0] // batch_size
 report_interval = num_steps // 10
@@ -48,9 +52,10 @@ for wl in lambdas:
     graph = tf.Graph()
     with graph.as_default():
         tf_train_dataset = tf.placeholder(dtype=tf.float32, shape=[None, n_dim])
-        tf_train_labels = tf.placeholder(dtype=tf.float32, shape=[None, 1])
-        tf_valid_dataset = tf.constant(valid_dataset)
-        tf_test_dataset = tf.constant(test_dataset)
+        # sparse style
+        tf_train_labels = tf.placeholder(dtype=tf.int32, shape=[None])
+        tf_valid_dataset = tf.constant(valid_dataset, dtype=tf.float32)
+        tf_test_dataset = tf.constant(test_dataset, dtype=tf.float32)
 
         global_step = tf.Variable(0)  # count the number of steps taken.
         initial_learning_rate = 0.05
@@ -72,8 +77,8 @@ for wl in lambdas:
         biases1 = tf.Variable(tf.ones([f1_depth]))
         weights2 = variable_with_weight_loss([f1_depth, f2_depth], wl, 'weights2')
         biases2 = tf.Variable(tf.ones([f2_depth]))
-        readout_weights = variable_with_weight_loss([f2_depth, 1], wl, 'readout_weights')
-        readout_biases = tf.Variable(tf.zeros([1]))
+        readout_weights = variable_with_weight_loss([f2_depth, n_label], wl, 'readout_weights')
+        readout_biases = tf.Variable(tf.zeros([n_label]))
 
         def model(data):
             f1 = tf.nn.relu(tf.nn.xw_plus_b(data, weights1, biases1))
@@ -85,7 +90,9 @@ for wl in lambdas:
         logits = model(tf_train_dataset)
 
         def loss(logits, labels):
-            err = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels, logits))
+            # doc typo-error for ValueException
+            # ValueError: Rank mismatch: Rank of labels should equal rank of logits minus 1.
+            err = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits))
             tf.add_to_collection('losses', err)
             return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
@@ -106,11 +113,11 @@ for wl in lambdas:
                 train_labels = train_labels[shuffle]
                 for step in range(num_steps):
                     offset = batch_size * step % (train_labels.shape[0] - batch_size)
-                    batch_data = train_dataset[offset:(offset + batch_size), :]
-                    batch_labels = train_labels[offset:(offset + batch_size), :]
+                    batch_data = train_dataset[offset:(offset + batch_size)]
+                    batch_labels = train_labels[offset:(offset + batch_size)]
                     feed_dict = {tf_train_dataset: batch_data, tf_train_labels: batch_labels}
                     _, l, preds = sess.run(fetches=[optimizer, loss, train_prediction], feed_dict=feed_dict)
-                    if step % report_interval:
+                    if step % report_interval == 0:
                         print('Minibatch loss at step %d: %.4f' % (step, l))
                         tm = metric(preds, batch_labels)
                         vm = metric(valid_prediction.eval(), valid_labels)
@@ -126,25 +133,35 @@ for wl in lambdas:
             fig, (ax1, ax2, ax3) = plt.subplots(ncols=1, nrows=3)
             ax1.plot(range(len(loss_history)), loss_history)
             ax1.set_xlim([0, len(loss_history)])
-            ax1.set_ylim([0, np.max(loss_history)])
+            ax1.set_ylim([0, np.max(loss_history) * 3])
+            ax1.set_title('loss curve')
+
             ax2.plot(range(len(cost_history)), cost_history)
             ax2.plot(range(len(cost_cv_history)), cost_cv_history)
             ax2.set_xlim([0, len(cost_history)])
-            ax2.set_ylim([0, np.max(np.max(cost_history), np.max(cost_cv_history))])
-            ax3.scatter(range(len(cost_epoch_history)), cost_epoch_history)
+            ax2.set_ylim([0, max(np.max(cost_history), np.max(cost_cv_history)) * 3])
+            ax2.set_title('training vs. validation metrics')
+
+            ax3.plot(range(len(cost_epoch_history)), cost_epoch_history, marker='o')
             ax3.set_xlim([0, len(cost_epoch_history)])
-            ax3.set_ylim([0, np.max(cost_epoch_history)])
-            plt.show()
+            ax3.set_ylim([0, max(cost_epoch_history) * 3])
+            ax3.set_title('epoch')
+
+            plt.subplots_adjust(hspace=0.5)
+            # plt.show()
+            plt.savefig('datahouse/learning-curve-{}.png'.format(wl))
 
             preds, = sess.run([train_prediction], feed_dict={tf_train_dataset: submission_dataset})
             # generate submission
             submission = pd.DataFrame()
             submission['user_id'] = np.arange(submission_dataset.shape[0])
-            submission['photo_id'] = np.arange(submission_dataset.shape[1])
+            submission['photo_id'] = np.arange(submission_dataset.shape[0])
             submission['click_probability'] = preds[:, 1]
-            submission.to_csv(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'v1.0.0-no-topic-submission_nn.txt'),
+            submission.to_csv(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'v1.0.0-no-topic-submission_nn-{}.txt'.format(wl)),
                               sep='\t', index=False, header=False,
                               float_format='%.6f')
 
             print('Finished.')
-            print('Cost time: {} min'.format((time.time() - start) / 60))
+            time_consume = 'Cost time: {} min, regular coefficient: {}\n'.format((time.time() - start) / 60, wl)
+            print(time_consume)
+            preprocessing_photos.logger.write(time_consume)
