@@ -12,18 +12,18 @@ from utils import logger
 DATA_HOUSE_PATH = '/home/leo/hdd-vmshare/user-interest/datahouse'
 CLEAN_DATA_PATH = DATA_HOUSE_PATH + '/clean-data'
 RAW_DATA_PATH = DATA_HOUSE_PATH + '/raw-data'
-DATASET_TEST_FACE = 'sample_test_face.txt'
-DATASET_TEST_INTERACTION = 'sample_test_interaction.txt'
-DATASET_TEST_TEXT = 'sample_test_text.txt'
-DATASET_TRAIN_FACE = 'sample_train_face.txt'
-DATASET_TRAIN_INTERACTION = 'sample_train_interaction.txt'
-DATASET_TRAIN_TEXT = 'sample_train_text.txt'
-# DATASET_TEST_FACE = 'test_face.txt'
-# DATASET_TEST_INTERACTION = 'test_interaction.txt'
-# DATASET_TEST_TEXT = 'test_text.txt'
-# DATASET_TRAIN_FACE = 'train_face.txt'
-# DATASET_TRAIN_INTERACTION = 'train_interaction.txt'
-# DATASET_TRAIN_TEXT = 'train_text.txt'
+# DATASET_TEST_FACE = 'sample_test_face.txt'
+# DATASET_TEST_INTERACTION = 'sample_test_interaction.txt'
+# DATASET_TEST_TEXT = 'sample_test_text.txt'
+# DATASET_TRAIN_FACE = 'sample_train_face.txt'
+# DATASET_TRAIN_INTERACTION = 'sample_train_interaction.txt'
+# DATASET_TRAIN_TEXT = 'sample_train_text.txt'
+DATASET_TEST_FACE = 'test_face.txt'
+DATASET_TEST_INTERACTION = 'test_interaction.txt'
+DATASET_TEST_TEXT = 'test_text.txt'
+DATASET_TRAIN_FACE = 'train_face.txt'
+DATASET_TRAIN_INTERACTION = 'train_interaction.txt'
+DATASET_TRAIN_TEXT = 'train_text.txt'
 
 TRAIN_PHOTO_EXAMPLE_WITH_TOPIC = 'train_photo_examples-topic.npy'
 TEST_PHOTO_EXAMPLE_WITH_TOPIC = 'test_photo_examples-topic.npy'
@@ -37,6 +37,7 @@ PHOTO_TOPIC = os.path.join(CLEAN_DATA_PATH, 'photo_topic.txt')
 common_words_counter = pd.read_csv(COMMON_WORDS_COUNTER, header=None, sep=' ')
 embeddings = np.load(EMBEDDINGS)
 photo_topic = pd.read_csv(PHOTO_TOPIC, header=None, sep=' ', dtype=int)
+# <key: str, value: int>
 common_word_idx_map = dict(zip(common_words_counter.iloc[:, 0], range(common_words_counter.shape[0])))
 photo_topic_map = dict(zip(photo_topic.iloc[:, 0], photo_topic.iloc[:, 1]))
 
