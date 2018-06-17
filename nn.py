@@ -106,7 +106,7 @@ train_dataset, valid_dataset, train_labels, valid_labels = train_test_split(trai
 
 # sample some data for cross-validation and metric evaluation
 test_dataset, test_labels = resample(test_dataset, test_labels, replace=False, n_samples=int(0.1 * len(test_labels)))
-valid_dataset, valid_labels = resample(valid_dataset, valid_labels, replace=False, n_samples=int(1 * len(valid_labels)))
+valid_dataset, valid_labels = resample(valid_dataset, valid_labels, replace=False, n_samples=int(0.01 * len(valid_labels)))
 test_dataset = stitch_topic_features(test_dataset)
 valid_dataset = stitch_topic_features(valid_dataset)
 
@@ -131,7 +131,7 @@ cost_history = []
 cost_epoch_history = []
 cost_cv_history = []
 loss_history = []
-initial_learning_rate_grid = [0.5, 0.2, 0.05]
+initial_learning_rate_grid = [0.9, 0.3, 0.1]
 
 # debugging
 num_epochs = 1
@@ -242,8 +242,8 @@ for initial_learning_rate in initial_learning_rate_grid:
 
                 plt.subplots_adjust(hspace=0.5)
                 # plt.show()
-                plt.savefig('datahouse/learning-curve-{}-{}.png'.format(wl, initial_learning_rate))
-                time_consume = '\nCost time: {} min, regularization: {}, learning rate: {}\n'.format((time.time() - start) / 60, wl, initial_learning_rate)
+                plt.savefig('datahouse/learning-curve-{}-{}-{}.png'.format(wl, initial_learning_rate, batch_size))
+                time_consume = '\nCost time: {} min, regularization: {}, learning rate: {}, batch size: {}\n'.format((time.time() - start) / 60, wl, initial_learning_rate, batch_size)
                 print(time_consume)
                 preprocessing_photos.logger.write(time_consume)
                 metrics = 'valid metric: {}, test metric: {}\n'.format(vm, epoch_test_metric)
