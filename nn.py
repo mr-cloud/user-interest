@@ -28,36 +28,36 @@ def stitch_topic_features(data):
 
 start = time.time()
 
-# print('Loading data and models...')
-# path = preprocessing_photos.RAW_DATA_PATH
-# columns = ['user_id', 'photo_id', 'click', 'like', 'follow', 'time', 'playing_time', 'duration_time']
-# train_interaction = pd.read_table(os.path.join(path, preprocessing_photos.DATASET_TRAIN_INTERACTION), header=None)
-# train_interaction.columns = columns
+print('Loading data and models...')
+path = preprocessing_photos.RAW_DATA_PATH
+columns = ['user_id', 'photo_id', 'click', 'like', 'follow', 'time', 'playing_time', 'duration_time']
+train_interaction = pd.read_table(os.path.join(path, preprocessing_photos.DATASET_TRAIN_INTERACTION), header=None)
+train_interaction.columns = columns
 # test_columns = ['user_id', 'photo_id', 'time', 'duration_time']
 # test_interaction = pd.read_table(os.path.join(path, preprocessing_photos.DATASET_TEST_INTERACTION), header=None)
 # test_interaction.columns = test_columns
-#
-# train_photo_topic = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, preprocessing_photos.TRAIN_PHOTO_EXAMPLE_WITH_TOPIC))
+
+train_photo_topic = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, preprocessing_photos.TRAIN_PHOTO_EXAMPLE_WITH_TOPIC))
 # test_photo_topic = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, preprocessing_photos.TEST_PHOTO_EXAMPLE_WITH_TOPIC))
-#
-# train_photo_features_idx_map = dict(zip(train_photo_topic[:, 0], range(train_photo_topic.shape[0])))
+
+train_photo_features_idx_map = dict(zip(train_photo_topic[:, 0], range(train_photo_topic.shape[0])))
 # test_photo_features_idx_map = dict(zip(test_photo_topic[:, 0], range(test_photo_topic.shape[0])))
-#
-# print('Adding photo features')
-# train_interaction['num_face'] = train_interaction['photo_id'].apply(
-#     lambda x: train_photo_topic[train_photo_features_idx_map[x], 1])
-# train_interaction['face_occu'] = train_interaction['photo_id'].apply(
-#     lambda x: train_photo_topic[train_photo_features_idx_map[x], 2])
-# train_interaction['gender_pref'] = train_interaction['photo_id'].apply(
-#     lambda x: train_photo_topic[train_photo_features_idx_map[x], 3])
-# train_interaction['age'] = train_interaction['photo_id'].apply(
-#     lambda x: train_photo_topic[train_photo_features_idx_map[x], 4])
-# train_interaction['looking'] = train_interaction['photo_id'].apply(
-#     lambda x: train_photo_topic[train_photo_features_idx_map[x], 5])
-# # Replace real topic with index in embeddings.
-# train_interaction['topic'] = train_interaction['photo_id'].apply(
-#     lambda x: preprocessing_photos.common_word_idx_map.get(str(int(train_photo_topic[train_photo_features_idx_map[x], 6])), 0))
-#
+
+print('Adding photo features')
+train_interaction['num_face'] = train_interaction['photo_id'].apply(
+    lambda x: train_photo_topic[train_photo_features_idx_map[x], 1])
+train_interaction['face_occu'] = train_interaction['photo_id'].apply(
+    lambda x: train_photo_topic[train_photo_features_idx_map[x], 2])
+train_interaction['gender_pref'] = train_interaction['photo_id'].apply(
+    lambda x: train_photo_topic[train_photo_features_idx_map[x], 3])
+train_interaction['age'] = train_interaction['photo_id'].apply(
+    lambda x: train_photo_topic[train_photo_features_idx_map[x], 4])
+train_interaction['looking'] = train_interaction['photo_id'].apply(
+    lambda x: train_photo_topic[train_photo_features_idx_map[x], 5])
+# Replace real topic with index in embeddings.
+train_interaction['topic'] = train_interaction['photo_id'].apply(
+    lambda x: preprocessing_photos.common_word_idx_map.get(str(int(train_photo_topic[train_photo_features_idx_map[x], 6])), 0))
+
 # test_interaction['num_face'] = test_interaction['photo_id'].apply(
 #     lambda x: test_photo_topic[test_photo_features_idx_map[x], 1])
 # test_interaction['face_occu'] = test_interaction['photo_id'].apply(
@@ -70,41 +70,42 @@ start = time.time()
 #     lambda x: test_photo_topic[test_photo_features_idx_map[x], 5])
 # test_interaction['topic'] = test_interaction['photo_id'].apply(
 #     lambda x: preprocessing_photos.common_word_idx_map.get(str(int(test_photo_topic[test_photo_features_idx_map[x], 6])), 0))
-#
-#
-# print('Adding user features')
-# rst = train_interaction.groupby('user_id')['click'].mean().to_dict()
-# train_interaction['user_click_oof'] = train_interaction['user_id'].apply(
-#     lambda x: rst.get(x, 0))
+
+
+print('Adding user features')
+rst = train_interaction.groupby('user_id')['click'].mean().to_dict()
+train_interaction['user_click_oof'] = train_interaction['user_id'].apply(
+    lambda x: rst.get(x, 0))
 # test_interaction['user_click_oof'] = test_interaction['user_id'].apply(
 #     lambda x: rst.get(x, 0)
 # )
-# rst = train_interaction.groupby('user_id')['playing_time'].mean().to_dict()
-# train_interaction['user_play_time_oof'] = train_interaction['user_id'].apply(
-#     lambda x: rst.get(x, 0))
+rst = train_interaction.groupby('user_id')['playing_time'].mean().to_dict()
+train_interaction['user_play_time_oof'] = train_interaction['user_id'].apply(
+    lambda x: rst.get(x, 0))
 # test_interaction['user_play_time_oof'] = test_interaction['user_id'].apply(
 #     lambda x: rst.get(x, 0)
 # )
-#
-# print('Normalizing...')
-# # No topic
-# features = ['user_click_oof', 'user_play_time_oof', 'duration_time', 'time', 'num_face', 'face_occu', 'gender_pref', 'age', 'looking']
-# scaler = MinMaxScaler()
-# dataset = scaler.fit_transform(train_interaction[features])
+
+print('Normalizing...')
+# with topic
+features = ['user_click_oof', 'user_play_time_oof', 'duration_time', 'time', 'num_face', 'face_occu', 'gender_pref', 'age', 'looking', 'topic']
+scaler = MinMaxScaler()
+dataset = scaler.fit_transform(train_interaction[features:-1])
+dataset = np.hstack((dataset, train_interaction['topic'].reshape((train_interaction.shape[0], 1))))
 # submission_dataset = scaler.transform(test_interaction[features])
-# labels = np.array(np.any(train_interaction[['click', 'like', 'follow']], axis=1), dtype=int)
-# print('Data size: ', dataset.shape)
+labels = np.array(np.any(train_interaction[['click', 'like', 'follow']], axis=1), dtype=int)
+print('Data size: ', dataset.shape)
+
 
 ## debugging data
-dataset = np.random.random_sample(size=(10000, 10))
-labels = np.random.randint(low=0, high=2, size=(10000,))
-submission_dataset = np.random.random_sample(size=(10000, 10))
-topic_feature = np.random.randint(5E4, size=(len(labels), 1))
-dataset = np.hstack((dataset, topic_feature))
-train_dataset, test_dataset, train_labels, test_labels = train_test_split(dataset, labels)
-train_dataset, valid_dataset, train_labels, valid_labels = train_test_split(train_dataset, train_labels)
+# dataset = np.random.random_sample(size=(10000, 10))
+# labels = np.random.randint(low=0, high=2, size=(10000,))
+# topic_feature = np.random.randint(5E4, size=(len(labels), 1))
+# dataset = np.hstack((dataset, topic_feature))
 
 # sample some data for cross-validation and metric evaluation
+train_dataset, test_dataset, train_labels, test_labels = train_test_split(dataset, labels)
+train_dataset, valid_dataset, train_labels, valid_labels = train_test_split(train_dataset, train_labels)
 test_dataset, test_labels = resample(test_dataset, test_labels, replace=False, n_samples=int(0.1 * len(test_labels)))
 valid_dataset, valid_labels = resample(valid_dataset, valid_labels, replace=False, n_samples=int(0.01 * len(valid_labels)))
 test_dataset = stitch_topic_features(test_dataset)
@@ -134,9 +135,9 @@ loss_history = []
 initial_learning_rate_grid = [0.9, 0.3, 0.1]
 
 # debugging
-num_epochs = 1
-lambdas = [0.0]
-initial_learning_rate_grid = [0.5]
+# num_epochs = 1
+# lambdas = [0.0]
+# initial_learning_rate_grid = [0.5]
 
 for initial_learning_rate in initial_learning_rate_grid:
     for wl in lambdas:
