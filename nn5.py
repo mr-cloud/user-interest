@@ -115,19 +115,23 @@ valid_dataset = stitch_topic_features(valid_dataset)
 del dataset
 del labels
 
+
 n_label = 2
 n_dim = train_dataset.shape[1] - 1 + preprocessing_photos.embeddings.shape[1]
-num_steps = 1000
-scalers = np.array([1])
-batch_size_grid = np.array(10000 * scalers, dtype=np.int32)
+scalers = np.array([1/9, 1/3, 1])
+batch_base = 1000
+batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
+num_steps_grid = train_dataset.shape[0] // batch_size_grid
 num_epoch = 1
-report_interval = num_steps // 100
-initial_learning_rate_grid = [0.45]
-final_learning_rate_grid = [0.1]
+report_interval_grid = num_steps_grid // 100
+initial_learning_rate_grid = [0.05]
+final_learning_rate_grid = [0.025]
 
 # hidden layers
-f1_depth = n_dim * 10
-f2_depth = n_dim * 3
+f1_depth = n_dim * 3
+f2_depth = n_dim * 10
+f3_depth = n_dim * 10
+f4_depth = n_dim * 3
 
 # L2 regularization
 lambdas = [0.0]
@@ -136,8 +140,11 @@ cost_epoch_history = []
 cost_cv_history = []
 loss_history = []
 
+
 for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
     for batch_size_idx, batch_size in enumerate(batch_size_grid):
+        num_steps = num_steps_grid[batch_size_idx]
+        report_interval = report_interval_grid[batch_size_idx]
         for wl in lambdas:
             start = time.time()
             graph = tf.Graph()
@@ -167,13 +174,19 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                 biases1 = tf.Variable(tf.ones([f1_depth]))
                 weights2 = variable_with_weight_loss([f1_depth, f2_depth], wl, 'weights2')
                 biases2 = tf.Variable(tf.ones([f2_depth]))
-                readout_weights = variable_with_weight_loss([f2_depth, n_label], wl, 'readout_weights')
+                weights3 = variable_with_weight_loss([f2_depth, f3_depth], wl, 'weights3')
+                biases3 = tf.Variable(tf.ones([f3_depth]))
+                weights4 = variable_with_weight_loss([f3_depth, f4_depth], wl, 'weights4')
+                biases4 = tf.Variable(tf.ones([f4_depth]))
+                readout_weights = variable_with_weight_loss([f4_depth, n_label], wl, 'readout_weights')
                 readout_biases = tf.Variable(tf.zeros([n_label]))
 
                 def model(data):
                     f1 = tf.nn.relu(tf.nn.xw_plus_b(data, weights1, biases1))
                     f2 = tf.nn.relu(tf.nn.xw_plus_b(f1, weights2, biases2))
-                    logits = tf.matmul(f2, readout_weights) + readout_biases
+                    f3 = tf.nn.relu(tf.nn.xw_plus_b(f2, weights3, biases3))
+                    f4 = tf.nn.relu(tf.nn.xw_plus_b(f3, weights4, biases4))
+                    logits = tf.matmul(f4, readout_weights) + readout_biases
                     return logits
 
 
@@ -208,7 +221,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                             batch_data = stitch_topic_features(batch_data)
                             feed_dict = {tf_train_dataset: batch_data, tf_train_labels: batch_labels}
                             _, l, preds = sess.run(fetches=[optimizer, loss, train_prediction], feed_dict=feed_dict)
-                            if step % report_interval == 0:
+                            if step % max(1, report_interval) == 0:
                                 print('Minibatch loss at step %d: %.4f' % (step, l))
                                 tm = metric(preds, batch_labels)
                                 vm = metric(valid_prediction.eval(), valid_labels)
@@ -232,7 +245,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     ax2.set_xlim([0, len(cost_history)])
                     ax2.set_ylim([0, 1])
                     ax2.set_title('training vs. validation metrics')
-                    ax2.legend(('train', 'valid'))
+                    ax2.legend(('train', 'valid'), loc='lower center')
 
                     ax3.plot(range(len(cost_epoch_history)), cost_epoch_history, marker='o')
                     ax3.set_xlim([0, len(cost_epoch_history)])
@@ -241,10 +254,13 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
 
                     plt.subplots_adjust(hspace=0.5)
                     # plt.show()
-                    plt.savefig('datahouse/learning-curve-{}-{}-{}-{}.png'.format(wl, initial_learning_rate, final_learning_rate, batch_size))
-                    time_consume = '\n{}, Cost time: {} min, regularization: {}, init learning rate: {}, final learning rate: {}, batch size: {}\n'.format('nn', (time.time() - start) / 60, wl, initial_learning_rate, final_learning_rate, batch_size)
+                    time_consume = '\n{}, Cost time: {} min, regularization: {}, learning rate: {}, final learning rate: {}, batch size: {}\n'.format('nn5', (time.time() - start) / 60, wl, initial_learning_rate, final_learning_rate, batch_size)
                     print(time_consume)
                     preprocessing_photos.logger.write(time_consume)
+                    topology = 'f1={}-f2={}-f3={}-f4={}'.format(f1_depth, f2_depth, f3_depth, f4_depth )
+                    print(topology + '\n')
+                    plt.savefig('datahouse/learning-curve-{}-{}-{}-{}-'.format(wl, initial_learning_rate, final_learning_rate, batch_size) + topology + '.png')
+                    preprocessing_photos.logger.write(topology + '\n')
                     metrics = 'valid metric: {}, test metric: {}\n'.format(vm, epoch_test_metric)
                     print(metrics)
                     preprocessing_photos.logger.write(metrics)
