@@ -33,15 +33,15 @@ path = preprocessing_photos.RAW_DATA_PATH
 columns = ['user_id', 'photo_id', 'click', 'like', 'follow', 'time', 'playing_time', 'duration_time']
 train_interaction = pd.read_table(os.path.join(path, preprocessing_photos.DATASET_TRAIN_INTERACTION), header=None)
 train_interaction.columns = columns
-# test_columns = ['user_id', 'photo_id', 'time', 'duration_time']
-# test_interaction = pd.read_table(os.path.join(path, preprocessing_photos.DATASET_TEST_INTERACTION), header=None)
-# test_interaction.columns = test_columns
+test_columns = ['user_id', 'photo_id', 'time', 'duration_time']
+test_interaction = pd.read_table(os.path.join(path, preprocessing_photos.DATASET_TEST_INTERACTION), header=None)
+test_interaction.columns = test_columns
 
 train_photo_topic = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, preprocessing_photos.TRAIN_PHOTO_EXAMPLE_WITH_TOPIC))
-# test_photo_topic = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, preprocessing_photos.TEST_PHOTO_EXAMPLE_WITH_TOPIC))
+test_photo_topic = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, preprocessing_photos.TEST_PHOTO_EXAMPLE_WITH_TOPIC))
 
 train_photo_features_idx_map = dict(zip(train_photo_topic[:, 0], range(train_photo_topic.shape[0])))
-# test_photo_features_idx_map = dict(zip(test_photo_topic[:, 0], range(test_photo_topic.shape[0])))
+test_photo_features_idx_map = dict(zip(test_photo_topic[:, 0], range(test_photo_topic.shape[0])))
 
 print('Adding photo features')
 train_interaction['num_face'] = train_interaction['photo_id'].apply(
@@ -58,33 +58,33 @@ train_interaction['looking'] = train_interaction['photo_id'].apply(
 train_interaction['topic'] = train_interaction['photo_id'].apply(
     lambda x: preprocessing_photos.common_word_idx_map.get(str(int(train_photo_topic[train_photo_features_idx_map[x], 6])), 0))
 
-# test_interaction['num_face'] = test_interaction['photo_id'].apply(
-#     lambda x: test_photo_topic[test_photo_features_idx_map[x], 1])
-# test_interaction['face_occu'] = test_interaction['photo_id'].apply(
-#     lambda x: test_photo_topic[test_photo_features_idx_map[x], 2])
-# test_interaction['gender_pref'] = test_interaction['photo_id'].apply(
-#     lambda x: test_photo_topic[test_photo_features_idx_map[x], 3])
-# test_interaction['age'] = test_interaction['photo_id'].apply(
-#     lambda x: test_photo_topic[test_photo_features_idx_map[x], 4])
-# test_interaction['looking'] = test_interaction['photo_id'].apply(
-#     lambda x: test_photo_topic[test_photo_features_idx_map[x], 5])
-# test_interaction['topic'] = test_interaction['photo_id'].apply(
-#     lambda x: preprocessing_photos.common_word_idx_map.get(str(int(test_photo_topic[test_photo_features_idx_map[x], 6])), 0))
+test_interaction['num_face'] = test_interaction['photo_id'].apply(
+    lambda x: test_photo_topic[test_photo_features_idx_map[x], 1])
+test_interaction['face_occu'] = test_interaction['photo_id'].apply(
+    lambda x: test_photo_topic[test_photo_features_idx_map[x], 2])
+test_interaction['gender_pref'] = test_interaction['photo_id'].apply(
+    lambda x: test_photo_topic[test_photo_features_idx_map[x], 3])
+test_interaction['age'] = test_interaction['photo_id'].apply(
+    lambda x: test_photo_topic[test_photo_features_idx_map[x], 4])
+test_interaction['looking'] = test_interaction['photo_id'].apply(
+    lambda x: test_photo_topic[test_photo_features_idx_map[x], 5])
+test_interaction['topic'] = test_interaction['photo_id'].apply(
+    lambda x: preprocessing_photos.common_word_idx_map.get(str(int(test_photo_topic[test_photo_features_idx_map[x], 6])), 0))
 
 
 print('Adding user features')
 rst = train_interaction.groupby('user_id')['click'].mean().to_dict()
 train_interaction['user_click_oof'] = train_interaction['user_id'].apply(
     lambda x: rst.get(x, 0))
-# test_interaction['user_click_oof'] = test_interaction['user_id'].apply(
-#     lambda x: rst.get(x, 0)
-# )
+test_interaction['user_click_oof'] = test_interaction['user_id'].apply(
+    lambda x: rst.get(x, 0)
+)
 rst = train_interaction.groupby('user_id')['playing_time'].mean().to_dict()
 train_interaction['user_play_time_oof'] = train_interaction['user_id'].apply(
     lambda x: rst.get(x, 0))
-# test_interaction['user_play_time_oof'] = test_interaction['user_id'].apply(
-#     lambda x: rst.get(x, 0)
-# )
+test_interaction['user_play_time_oof'] = test_interaction['user_id'].apply(
+    lambda x: rst.get(x, 0)
+)
 
 print('Normalizing...')
 # with topic
@@ -92,7 +92,8 @@ features = ['user_click_oof', 'user_play_time_oof', 'duration_time', 'time', 'nu
 scaler = MinMaxScaler()
 dataset = scaler.fit_transform(train_interaction[features[:-1]])
 dataset = np.hstack((dataset, train_interaction['topic'].reshape((train_interaction.shape[0], 1))))
-# submission_dataset = scaler.transform(test_interaction[features])
+submission_dataset = scaler.transform(test_interaction[features[:-1]])
+submission_dataset = np.hstack((submission_dataset, test_interaction['topic'].reshape((test_interaction.shape[0], 1))))
 labels = np.array(np.any(train_interaction[['click', 'like', 'follow']], axis=1), dtype=int)
 print('Data size: ', dataset.shape)
 
@@ -102,6 +103,9 @@ print('Data size: ', dataset.shape)
 # labels = np.random.randint(low=0, high=2, size=(10000,))
 # topic_feature = np.random.randint(5E4, size=(len(labels), 1))
 # dataset = np.hstack((dataset, topic_feature))
+# submission_dataset = np.random.random_sample(size=(100000, 10))
+# submission_dataset = np.hstack((submission_dataset, np.random.randint(5E4, size=(submission_dataset.shape[0], 1))))
+# test_interaction = pd.DataFrame(np.ones(shape=(submission_dataset.shape[0], 2), dtype=np.int32), columns=('user_id', 'photo_id'))
 
 # sample some data for cross-validation and metric evaluation
 train_dataset, test_dataset, train_labels, test_labels = train_test_split(dataset, labels)
@@ -118,7 +122,7 @@ del labels
 
 n_label = 2
 n_dim = train_dataset.shape[1] - 1 + preprocessing_photos.embeddings.shape[1]
-scalers = np.array([1/9, 1/3, 1])
+scalers = np.array([1])
 batch_base = 1000
 batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
 num_steps_grid = train_dataset.shape[0] // batch_size_grid
@@ -128,7 +132,7 @@ initial_learning_rate_grid = [0.05]
 final_learning_rate_grid = [0.025]
 
 # hidden layers
-f1_depth = n_dim * 3
+f1_depth = n_dim * 10
 f2_depth = n_dim * 10
 f3_depth = n_dim * 10
 f4_depth = n_dim * 3
@@ -264,4 +268,33 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     metrics = 'valid metric: {}, test metric: {}\n'.format(vm, epoch_test_metric)
                     print(metrics)
                     preprocessing_photos.logger.write(metrics)
+
+                    print('Predicting...')
+                    del train_dataset
+                    del train_labels
+                    del valid_dataset
+                    del valid_labels
+                    del test_dataset
+                    del test_labels
+                    n_submission = submission_dataset.shape[0]
+                    preds_rst = np.ndarray(shape=(n_submission), dtype=np.float32)
+
+                    start = 0  # inclusively
+                    end = start  # exclusively
+                    while end < n_submission:
+                        start = end
+                        end = min(start + batch_size * 10, n_submission)
+                        batch_data = stitch_topic_features(submission_dataset[start: end])
+                        feed_dict = {tf_train_dataset: batch_data}
+                        preds, = sess.run(fetches=[train_prediction], feed_dict=feed_dict)
+                        preds_rst[start: end] = preds[:, 1]
+                    # generate submission
+                    submission = pd.DataFrame()
+                    submission['user_id'] = test_interaction['user_id']
+                    submission['photo_id'] = test_interaction['photo_id']
+                    submission['click_probability'] = preds_rst
+                    submission.to_csv(
+                        os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'v1.1.0-with-topic-submission_nn5.txt'),
+                        sep='\t', index=False, header=False,
+                        float_format='%.6f')
                     print('Finished.')
