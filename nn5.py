@@ -21,9 +21,7 @@ def metric(prediction, target):
 
 
 def stitch_topic_features(data):
-    topic_indices = np.array(data[:, -1], dtype=np.int32)
-    topic_features = preprocessing_photos.embeddings[topic_indices]
-    return np.hstack((data[:, :-1], topic_features))
+    return data[:, :-1]
 
 
 start = time.time()
@@ -121,8 +119,8 @@ del labels
 
 
 n_label = 2
-n_dim = train_dataset.shape[1] - 1 + preprocessing_photos.embeddings.shape[1]
-scalers = np.array([1])
+n_dim = test_dataset.shape[1]
+scalers = np.array([1/9, 1/3, 1])
 batch_base = 1000
 batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
 num_steps_grid = train_dataset.shape[0] // batch_size_grid
