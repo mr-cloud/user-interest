@@ -9,7 +9,7 @@ import pandas as pd
 
 from utils import logger
 
-DATA_HOUSE_PATH = '/home/leo/hdd-vmshare/user-interest/datahouse'
+DATA_HOUSE_PATH = '/media/leo/working/SoftwarePackage/datahouse/user-interest/datahouse'
 CLEAN_DATA_PATH = DATA_HOUSE_PATH + '/clean-data'
 RAW_DATA_PATH = DATA_HOUSE_PATH + '/raw-data'
 # DATASET_TEST_FACE = 'sample_test_face.txt'
