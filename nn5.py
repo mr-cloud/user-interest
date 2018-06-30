@@ -24,7 +24,7 @@ def stitch_topic_features(data):
     return data[:, :-1]
 
 
-start = time.time()
+start_point = time.time()
 
 print('Loading data and models...')
 path = preprocessing_photos.RAW_DATA_PATH
@@ -112,7 +112,9 @@ test_dataset, test_labels = resample(test_dataset, test_labels, replace=False, n
 valid_dataset, valid_labels = resample(valid_dataset, valid_labels, replace=False, n_samples=int(0.01 * len(valid_labels)))
 test_dataset = stitch_topic_features(test_dataset)
 valid_dataset = stitch_topic_features(valid_dataset)
-
+data_pre_time_cost = '\nData preprocessing time: {} min'.format((time.time() - start_point) / 60)
+print(data_pre_time_cost)
+preprocessing_photos.logger.write(data_pre_time_cost)
 
 del dataset
 del labels
@@ -120,7 +122,7 @@ del labels
 
 n_label = 2
 n_dim = test_dataset.shape[1]
-scalers = np.array([1/9, 1/3, 1])
+scalers = np.array([1])
 batch_base = 1000
 batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
 num_steps_grid = train_dataset.shape[0] // batch_size_grid
@@ -130,17 +132,13 @@ initial_learning_rate_grid = [0.05]
 final_learning_rate_grid = [0.025]
 
 # hidden layers
-f1_depth = n_dim * 10
-f2_depth = n_dim * 10
-f3_depth = n_dim * 10
-f4_depth = n_dim * 3
+f1_depth = n_dim * 30
+f2_depth = n_dim * 90
+f3_depth = n_dim * 30
+f4_depth = n_dim * 10
 
 # L2 regularization
 lambdas = [0.0]
-cost_history = []
-cost_epoch_history = []
-cost_cv_history = []
-loss_history = []
 
 
 for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
@@ -148,7 +146,12 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
         num_steps = num_steps_grid[batch_size_idx]
         report_interval = report_interval_grid[batch_size_idx]
         for wl in lambdas:
-            start = time.time()
+            start_point = time.time()
+            cost_history = []
+            cost_epoch_history = []
+            cost_cv_history = []
+            loss_history = []
+
             graph = tf.Graph()
             with graph.as_default():
                 tf_train_dataset = tf.placeholder(dtype=tf.float32, shape=[None, n_dim])
@@ -256,7 +259,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
 
                     plt.subplots_adjust(hspace=0.5)
                     # plt.show()
-                    time_consume = '\n{}, Cost time: {} min, regularization: {}, learning rate: {}, final learning rate: {}, batch size: {}\n'.format('nn5', (time.time() - start) / 60, wl, initial_learning_rate, final_learning_rate, batch_size)
+                    time_consume = '\n{}, Cost time: {} min, regularization: {}, learning rate: {}, final learning rate: {}, batch size: {}\n'.format('nn5', (time.time() - start_point) / 60, wl, initial_learning_rate, final_learning_rate, batch_size)
                     print(time_consume)
                     preprocessing_photos.logger.write(time_consume)
                     topology = 'f1={}-f2={}-f3={}-f4={}'.format(f1_depth, f2_depth, f3_depth, f4_depth )
@@ -268,12 +271,13 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     preprocessing_photos.logger.write(metrics)
 
                     print('Predicting...')
-                    del train_dataset
-                    del train_labels
-                    del valid_dataset
-                    del valid_labels
-                    del test_dataset
-                    del test_labels
+                    # comment this when only one model is trained.
+                    # del train_dataset
+                    # del train_labels
+                    # del valid_dataset
+                    # del valid_labels
+                    # del test_dataset
+                    # del test_labels
                     n_submission = submission_dataset.shape[0]
                     preds_rst = np.ndarray(shape=(n_submission), dtype=np.float32)
 
@@ -292,7 +296,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     submission['photo_id'] = test_interaction['photo_id']
                     submission['click_probability'] = preds_rst
                     submission.to_csv(
-                        os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'v1.1.0-with-topic-submission_nn5.txt'),
+                        os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'v1.1.0-without-topic-submission_nn5.txt'),
                         sep='\t', index=False, header=False,
                         float_format='%.6f')
                     print('Finished.')
