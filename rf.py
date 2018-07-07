@@ -74,26 +74,28 @@ test_interaction['user_play_time_oof'] = test_interaction['user_id'].apply(
 
 print('Normalizing...')
 ## No topic
-# features = ['user_click_oof', 'user_play_time_oof', 'duration_time', 'time', 'num_face', 'face_occu', 'gender_pref', 'age', 'looking']
-# scaler = MinMaxScaler()
-# dataset = scaler.fit_transform(train_interaction[features])
-# submission_dataset = scaler.transform(test_interaction[features])
-# labels = np.array(np.any(train_interaction[['click', 'like', 'follow']], axis=1), dtype=int)
-
-## With topic
-num_features = ['user_click_oof', 'user_play_time_oof', 'duration_time', 'time', 'num_face', 'face_occu', 'gender_pref', 'age', 'looking']
-cat_features = ['topic']
+features = ['user_click_oof', 'user_play_time_oof', 'duration_time', 'time', 'num_face', 'face_occu', 'gender_pref', 'age', 'looking']
 scaler = MinMaxScaler()
-dataset = scaler.fit_transform(train_interaction[num_features])
-submission_dataset = scaler.transform(test_interaction[num_features])
-enc = OneHotEncoder(handle_unknown='ignore')
-X_cat = enc.fit_transform(train_interaction[cat_features])
-X_t_cat = enc.transform(test_interaction[cat_features])
-dataset = sparse.hstack([X_cat, dataset]).tocsr()
-submission_dataset = sparse.hstack([X_t_cat, submission_dataset]).tocsr()
+dataset = scaler.fit_transform(train_interaction[features])
+submission_dataset = scaler.transform(test_interaction[features])
 labels = np.array(np.any(train_interaction[['click', 'like', 'follow']], axis=1), dtype=int)
 
-dataset, labels = resample(dataset, labels, replace=False, n_samples=int(len(labels) * 0.3))
+## With topic
+# num_features = ['user_click_oof', 'user_play_time_oof', 'duration_time', 'time', 'num_face', 'face_occu', 'gender_pref', 'age', 'looking']
+# cat_features = ['topic']
+# scaler = MinMaxScaler()
+# dataset = scaler.fit_transform(train_interaction[num_features])
+# submission_dataset = scaler.transform(test_interaction[num_features])
+# enc = OneHotEncoder(handle_unknown='ignore')
+# X_cat = enc.fit_transform(train_interaction[cat_features])
+# X_t_cat = enc.transform(test_interaction[cat_features])
+# dataset = sparse.hstack([X_cat, dataset]).tocsr()
+# submission_dataset = sparse.hstack([X_t_cat, submission_dataset]).tocsr()
+# labels = np.array(np.any(train_interaction[['click', 'like', 'follow']], axis=1), dtype=int)
+
+
+del train_interaction
+dataset, labels = resample(dataset, labels, replace=False, n_samples=int(len(labels) * 0.7))
 print('Data size: ', dataset.shape)
 train_dataset, test_dataset, train_labels, test_labels = train_test_split(dataset, labels)
 
@@ -101,9 +103,9 @@ reg = RandomForestClassifier()
 
 # RF
 tuned_parameters_rf = [{
-    'n_estimators': [30],
-    'min_samples_split': [18],
-    'min_samples_leaf': [9]
+    'n_estimators': [10],
+    'min_samples_split': [18, 24],
+    'min_samples_leaf': [9, 12]
 }]
 
 
@@ -124,7 +126,10 @@ print()
 
 
 def metric(prediction, target):
-    return roc_auc_score(target, prediction[:, 1])
+    try:
+        return roc_auc_score(target, prediction[:, 1])
+    except ValueError:
+        return 1.0
 
 
 print('Training metric %.6f' % metric(reg.predict_proba(train_dataset), train_labels))
@@ -136,7 +141,7 @@ submission = pd.DataFrame()
 submission['user_id'] = test_interaction['user_id']
 submission['photo_id'] = test_interaction['photo_id']
 submission['click_probability'] = preds[:, 1]
-submission.to_csv(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'v1.0.1-with-topic-submission_rf.txt'), sep='\t', index=False, header=False,
+submission.to_csv(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'v1.0.3-no-topic-submission_rf.txt'), sep='\t', index=False, header=False,
                   float_format='%.6f')
 
 print('Finished.')

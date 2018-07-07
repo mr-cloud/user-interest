@@ -1,3 +1,29 @@
+## contest info
+- introduction
+![introduction](intro.png)
+- dataset
+![data1](data1.png)
+![data2](data2.png)
+- evaluation
+![evaluation](eval.png)
+
+
+## 项目组织结构
+- **preprocessing_text_feature_embedding.py**. 构造作品的文本数据的embedding。
+- **preprocessing_top_word_tfidf.py**. 利用IF-TDF算法，为作品的文本数据提取最具代表性单词。
+- **preprocessing_photos.py**. 构造关于作品的examples，分别包含人脸，文本features。
+- **preprocessing_user_preferences.py**. 构造关于用户的examples，features为用户对各种作品大类的评分。
+- **modeling_k_means.py**. 利用K-Means模型对作品、用户进行聚类。
+- **recommend_for_each_user.py**. 利用已训练的K-Means模型，预测用户点击率，保存预测结果到文件。
+- **lr.py**. 利用sklearn的LR模型，对用户与作品的交互行为examples进行分类，输出概率作为点击可能性预测，保存预测结果到文件。
+- **rf.py**. 利用sklearn的ensemble模型（RandomForestClassifier），自动化grid search挑选超参数，对交互行为examples进行分类，输出概率作为点击可能性预测，保存预测结果到文件。
+- **nn.py**. 利用TensorFlow构建神经网络模型（3层neural network）， grid search方法挑选超参数，对交互行为examples进行分类，输出概率作为点击可能性预测，保存预测结果到文件。
+- **nn5.py**. 利用TensorFlow构建神经网络模型（5层neural network）， grid search方法挑选超参数，对交互行为examples进行分类，输出概率作为点击可能性预测，保存预测结果到文件。
+- **utils.py**. 辅助功能，包括记录日志。
+- **all_in.py**. K-Means建模流程，从样例构造预处理一直到预测输出结果到文件的全流程。
+- **evaluation_script.py**. 可验证预测输出文件是否符合要求，并根据输入的测试结果文件，计算AUC得分。
+
+
 ## 数据探查
 
 ### 数据源与隐藏规律
@@ -38,7 +64,6 @@
 - 计算点击率：P{click} = pop_features[cate_id] mapped into [0, 1]
 - 输出结果：<user_id, photo_id, click_probability>
 
-
 ###监督学习 v1.0.0
 什么样的用户面对什么样的作品，出现点击或者不点击: <user_features, photo_features, click ({0 ,1})>
 - 输入样例：历史交互数据
@@ -65,3 +90,14 @@
 
 ### 文字信息处理
 - 常用汉语词汇量50000
+- embedding维度128
+- TF-IDF挑选最具代表性的一个单词
+
+### 监督学习 v3.0.0
+- NN modeling with mini-batch style in TF
+- SGD optimization
+- grid search for hyper-parameters tuning
+
+
+
+
