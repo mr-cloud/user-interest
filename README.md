@@ -98,6 +98,9 @@
 - SGD optimization
 - grid search for hyper-parameters tuning
 
-
+### 监督学习 v4.0.0 TODO
+- classification --> regression 
+- text info --> context
+- visual info --> auto-encoder with low dimensions
 
 
