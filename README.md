@@ -26,21 +26,27 @@
 
 ## 数据探查
 
-### 数据源与隐藏规律
+### 数据源与隐藏规律，复赛数据是初赛的2.5倍左右
 - train_interaction.txt
-    - 2.0E7
+    - 5.2E7
     - 其中用户数为1.5E4
 - train_face.txt
-    - 1.6E6
+    - 3.0E6
     - 不是所有作品都有人脸数据
 - train_text.txt
-    - 4.3E6
+    - 7.6E6
     - 每个单词已编码
-    - 所有的作品都有封面数据
+    - 所有的作品都有封面文字数据
+- test_face.txt
+    - 6.3E5
+- test_text.txt
+    - 1.6E6
 - test_interaction.txt
-    - 3.3E6
+    - 8.2E6
     - 待预测的用户都有交互历史
     - 用户数同*train_interaction.txt*
+
+
 
 ##策略：
 ###物以类聚，人以群分
@@ -98,9 +104,14 @@
 - SGD optimization
 - grid search for hyper-parameters tuning
 
-### 监督学习 v4.0.0 TODO
-- classification --> regression 
-- text info --> context
-- visual info --> auto-encoder with low dimensions
+### 监督学习 v4.0.0
+- TODOs
+    - classification --> regression 
+    - text info --> context (前20%的单词的平均embedding)
+    - visual info --> auto-encoder with low dimensions
+    - true vs. false examples
+    - users number
+- features
+    - user_click_oof, user_play_time_oof, duration_time, time, num_face, face_occu, gender_pref, age, looking, topic, click
 
 
