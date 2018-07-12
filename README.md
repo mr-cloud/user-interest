@@ -109,8 +109,9 @@
     - classification --> regression 
     - text info --> context (前20%的单词的平均embedding)
     - visual info --> auto-encoder with low dimensions
-    - true vs. false examples
-    - users number
+    - true vs. false examples: #pos=10547052, #tot=52134536, ratio=20.230451461196473%
+    - users number: 37821
+    - 用户交互次数主要分布在1000至2000，近似Poisson分布
 - features
     - user_click_oof, user_play_time_oof, duration_time, time, num_face, face_occu, gender_pref, age, looking, topic, click
 
