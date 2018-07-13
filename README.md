@@ -107,12 +107,17 @@
 ### 监督学习 v4.0.0
 - TODOs
     - classification --> regression 
-    - text info --> context (前20%的单词的平均embedding)
+    - text info --> context (前20%的单词的加权平均embedding)
     - visual info --> auto-encoder with low dimensions
     - true vs. false examples: #pos=10547052, #tot=52134536, ratio=20.230451461196473%
     - users number: 37821
     - 用户交互次数主要分布在1000至2000，近似Poisson分布
 - features
-    - user_click_oof, user_play_time_oof, duration_time, time, num_face, face_occu, gender_pref, age, looking, topic, click
-
+    - 用户。构建兴趣空间向量，对于每个用户，用交互行为中的作品的空间向量以时间加权。
+    - 作品。人脸 --> 文字 --> 图像。duration_time, num_face, face_occu, gender_pref, age, looking, context
+    - 交互时间戳。time
+- model
+    - NN with regression (0, 3)
+- predict
+    - output shit-mapping to (0, 1)
 
