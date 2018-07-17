@@ -10,7 +10,7 @@ import time
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.utils import resample
 
-import preprocessing_photos
+import preprocessing_photo_face_features
 
 
 def metric(prediction, target):
@@ -22,22 +22,22 @@ def metric(prediction, target):
 
 def stitch_topic_features(data):
     topic_indices = np.array(data[:, -1], dtype=np.int32)
-    topic_features = preprocessing_photos.embeddings[topic_indices]
+    topic_features = preprocessing_photo_face_features.embeddings[topic_indices]
     return np.hstack((data[:, :-1], topic_features))
 
 
 start = time.time()
 
 print('Loading data and models...')
-path = preprocessing_photos.RAW_DATA_PATH
+path = preprocessing_photo_face_features.RAW_DATA_PATH
 columns = ['user_id', 'photo_id', 'click', 'like', 'follow', 'time', 'playing_time', 'duration_time']
-train_interaction = pd.read_table(os.path.join(path, preprocessing_photos.DATASET_TRAIN_INTERACTION), header=None)
+train_interaction = pd.read_table(os.path.join(path, preprocessing_photo_face_features.DATASET_TRAIN_INTERACTION), header=None)
 train_interaction.columns = columns
 # test_columns = ['user_id', 'photo_id', 'time', 'duration_time']
 # test_interaction = pd.read_table(os.path.join(path, preprocessing_photos.DATASET_TEST_INTERACTION), header=None)
 # test_interaction.columns = test_columns
 
-train_photo_topic = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, preprocessing_photos.TRAIN_FACE_FEATURES))
+train_photo_topic = np.load(os.path.join(preprocessing_photo_face_features.CLEAN_DATA_PATH, preprocessing_photo_face_features.TRAIN_FACE_FEATURES))
 # test_photo_topic = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, preprocessing_photos.TEST_PHOTO_EXAMPLE_WITH_TOPIC))
 
 train_photo_features_idx_map = dict(zip(train_photo_topic[:, 0], range(train_photo_topic.shape[0])))
@@ -56,7 +56,7 @@ train_interaction['looking'] = train_interaction['photo_id'].apply(
     lambda x: train_photo_topic[train_photo_features_idx_map[x], 5])
 # Replace real topic with index in embeddings.
 train_interaction['topic'] = train_interaction['photo_id'].apply(
-    lambda x: preprocessing_photos.common_word_idx_map.get(str(int(train_photo_topic[train_photo_features_idx_map[x], 6])), 0))
+    lambda x: preprocessing_photo_face_features.common_word_idx_map.get(str(int(train_photo_topic[train_photo_features_idx_map[x], 6])), 0))
 
 # test_interaction['num_face'] = test_interaction['photo_id'].apply(
 #     lambda x: test_photo_topic[test_photo_features_idx_map[x], 1])
@@ -116,7 +116,7 @@ del dataset
 del labels
 
 n_label = 2
-n_dim = train_dataset.shape[1] - 1 + preprocessing_photos.embeddings.shape[1]
+n_dim = train_dataset.shape[1] - 1 + preprocessing_photo_face_features.embeddings.shape[1]
 num_steps = 1000
 scalers = np.array([1])
 batch_size_grid = np.array(10000 * scalers, dtype=np.int32)
@@ -244,8 +244,8 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     plt.savefig('datahouse/learning-curve-{}-{}-{}-{}.png'.format(wl, initial_learning_rate, final_learning_rate, batch_size))
                     time_consume = '\n{}, Cost time: {} min, regularization: {}, init learning rate: {}, final learning rate: {}, batch size: {}\n'.format('nn', (time.time() - start) / 60, wl, initial_learning_rate, final_learning_rate, batch_size)
                     print(time_consume)
-                    preprocessing_photos.logger.write(time_consume)
+                    preprocessing_photo_face_features.logger.write(time_consume)
                     metrics = 'valid metric: {}, test metric: {}\n'.format(vm, epoch_test_metric)
                     print(metrics)
-                    preprocessing_photos.logger.write(metrics)
+                    preprocessing_photo_face_features.logger.write(metrics)
                     print('Finished.')

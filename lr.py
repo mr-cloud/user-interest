@@ -7,19 +7,19 @@ from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 import os
 
-import preprocessing_photos
+import preprocessing_photo_face_features
 
 # from config import path
-path = preprocessing_photos.RAW_DATA_PATH
+path = preprocessing_photo_face_features.RAW_DATA_PATH
 
 out = open(os.path.join('datahouse/rst.txt'), 'w')
 
 columns = ['user_id', 'photo_id', 'click', 'like', 'follow', 'time', 'playing_time', 'duration_time']
-train_interaction = pd.read_table(os.path.join(path, preprocessing_photos.DATASET_TRAIN_INTERACTION), header=None)
+train_interaction = pd.read_table(os.path.join(path, preprocessing_photo_face_features.DATASET_TRAIN_INTERACTION), header=None)
 train_interaction.columns = columns
 test_columns = ['user_id', 'photo_id', 'time', 'duration_time']
 
-test_interaction = pd.read_table(os.path.join(path, preprocessing_photos.DATASET_TEST_INTERACTION), header=None)
+test_interaction = pd.read_table(os.path.join(path, preprocessing_photo_face_features.DATASET_TEST_INTERACTION), header=None)
 test_interaction.columns = test_columns
 
 cat_features = ['user_id']
@@ -68,8 +68,8 @@ for c in cat_features:
 
 num_features += cat_count_features
 
-train_photo_topic = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, preprocessing_photos.TRAIN_FACE_FEATURES))
-test_photo_topic = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, preprocessing_photos.TEST_FACE_FEATURES))
+train_photo_topic = np.load(os.path.join(preprocessing_photo_face_features.CLEAN_DATA_PATH, preprocessing_photo_face_features.TRAIN_FACE_FEATURES))
+test_photo_topic = np.load(os.path.join(preprocessing_photo_face_features.CLEAN_DATA_PATH, preprocessing_photo_face_features.TEST_FACE_FEATURES))
 
 train_photo_features_idx_map = dict(zip(train_photo_topic[:, 0], range(train_photo_topic.shape[0])))
 test_photo_features_idx_map = dict(zip(test_photo_topic[:, 0], range(test_photo_topic.shape[0])))
@@ -157,7 +157,7 @@ submission = pd.DataFrame()
 submission['user_id'] = test_interaction['user_id']
 submission['photo_id'] = test_interaction['photo_id']
 submission['click_probability'] = y_sub
-submission.to_csv(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'v1.0.0-no-topic-submission_lr.txt'), sep='\t', index=False, header=False,
+submission.to_csv(os.path.join(preprocessing_photo_face_features.DATA_HOUSE_PATH, 'v1.0.0-no-topic-submission_lr.txt'), sep='\t', index=False, header=False,
                   float_format='%.6f')
 
 out.write('Finished.')

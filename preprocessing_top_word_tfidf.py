@@ -4,7 +4,7 @@ import os
 import numpy as np
 import pickle
 
-import preprocessing_photos
+import consts
 
 
 def load_data(filenames, prefix):
@@ -21,8 +21,9 @@ def load_data(filenames, prefix):
     return corpus, photos_id
 
 
-filenames = [preprocessing_photos.DATASET_TRAIN_TEXT, preprocessing_photos.DATASET_TEST_TEXT]
-prefix = preprocessing_photos.RAW_DATA_PATH
+filenames = [consts.DATASET_TRAIN_TEXT, consts.DATASET_TEST_TEXT]
+prefix = consts.RAW_DATA_PATH
+# photo_id is int
 corpus, photos_id = load_data(filenames, prefix)
 
 vectorizer = CountVectorizer(analyzer=lambda x: x.split(','))
@@ -30,6 +31,7 @@ counts = vectorizer.fit_transform(corpus)
 transformer = TfidfTransformer()
 tfidf = transformer.fit_transform(counts)
 print('Trained TF-IDF, size: ', tfidf.shape)
+# XXX
 arg_sort = np.argsort(tfidf, axis=1)
 # top 10
 tfidf = tfidf[:, arg_sort[int(tfidf.shape[1] * 0.9):]]
@@ -39,7 +41,7 @@ print('#photos={}'.format(n_photos))
 features = vectorizer.get_feature_names()
 print('#features={}'.format(len(features)))
 photo_topic = map()
-with open(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'photo_topic.pkl'), 'wb') as output:
+with open(os.path.join(consts.CLEAN_DATA_PATH, 'photo_topic.pkl'), 'wb') as output:
     for ind in range(tfidf.shape[0]):
         if ind % 10000 == 0:
             print('Writing #{}'.format(ind))

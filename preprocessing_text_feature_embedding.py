@@ -9,11 +9,11 @@ from matplotlib import pylab
 from six.moves import range
 from sklearn.manifold import TSNE
 
-import preprocessing_photos
+
+import consts
 
 
-
-filenames = [preprocessing_photos.DATASET_TRAIN_TEXT, preprocessing_photos.DATASET_TEST_TEXT]
+filenames = [consts.DATASET_TRAIN_TEXT, consts.DATASET_TEST_TEXT]
 
 
 def read_data(filenames, path_prefix):
@@ -31,7 +31,7 @@ def read_data(filenames, path_prefix):
     return text_data
 
 
-words = read_data(filenames, preprocessing_photos.RAW_DATA_PATH)
+words = read_data(filenames, consts.RAW_DATA_PATH)
 print('Data size %d' % len(words))
 
 vocabulary_size = 50000
@@ -67,11 +67,12 @@ def build_dataset(words):
 
 
 data, count, dictionary, reverse_dictionary = build_dataset(words)
+vocabulary_size = len(dictionary)
 print('Most common words (+UNK)', count[:5])
 print('Sample data', data[:10])
 del words  # Hint to reduce memory.
 print('Saving common words counter with index...')
-with open(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'common-words-counter.txt'), 'w') as output:
+with open(os.path.join(consts.CLEAN_DATA_PATH, 'common-words-counter.txt'), 'w') as output:
     for wc in count:
         output.write('{} {}\n'.format(wc[0], wc[1]))
 data_index = 0
@@ -209,7 +210,7 @@ with graph.as_default():
                     print(log)
         final_embeddings = normalized_embeddings.eval()
 
-        np.save(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'embeddings.npy'),
+        np.save(os.path.join(consts.CLEAN_DATA_PATH, 'embeddings.npy'),
                 final_embeddings)
         num_points = 400
 
@@ -227,7 +228,7 @@ with graph.as_default():
                 pylab.annotate(label, xy=(x, y), xytext=(5, 2), textcoords='offset points',
                                ha='right', va='bottom')
             # pylab.show()
-            pylab.savefig(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'embedding-pca.jpg'))
+            pylab.savefig(os.path.join(consts.DATA_HOUSE_PATH, 'embedding-pca.jpg'))
 
         words = [reverse_dictionary[i] for i in range(1, num_points + 1)]
         plot(two_d_embeddings, words)

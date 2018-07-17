@@ -4,7 +4,7 @@ from operator import attrgetter
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 
-import preprocessing_photos
+import preprocessing_photo_face_features
 import numpy as np
 import pandas as pd
 
@@ -51,15 +51,15 @@ def recommend(sub_prefix):
     photo_model_prefix = 'photo-'
     pop_examples_prefix = 'pop_examples-'
     magicians = list()
-    for file in os.listdir(preprocessing_photos.DATA_HOUSE_PATH):
+    for file in os.listdir(preprocessing_photo_face_features.DATA_HOUSE_PATH):
         if file.startswith(photo_model_prefix):
-            photo_kmeans = joblib.load(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, file))
+            photo_kmeans = joblib.load(os.path.join(preprocessing_photo_face_features.DATA_HOUSE_PATH, file))
             photo_kmeans.verbose = 0
             first_sep = file.index('-')
             second_sep = file.rindex('.')
             K1 = int(file[first_sep + 1: second_sep])
-            pop_examples = np.loadtxt(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, pop_examples_prefix + str(K1) + '.txt'),
-                                  delimiter=',')
+            pop_examples = np.loadtxt(os.path.join(preprocessing_photo_face_features.CLEAN_DATA_PATH, pop_examples_prefix + str(K1) + '.txt'),
+                                      delimiter=',')
             if len(pop_examples.shape) == 1:
                 pop_examples = pop_examples.reshape(-1, pop_examples.shape[0])
             magicians.append(Magician(photo_kmeans, K1, pop_examples))
@@ -72,8 +72,8 @@ def recommend(sub_prefix):
 
     # normalization
     print('Normalizing dataset...')
-    photo_examples = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'test_photo_examples.npy'))
-    train_photo_examples = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'train_photo_examples.npy'))
+    photo_examples = np.load(os.path.join(preprocessing_photo_face_features.CLEAN_DATA_PATH, 'test_photo_examples.npy'))
+    train_photo_examples = np.load(os.path.join(preprocessing_photo_face_features.CLEAN_DATA_PATH, 'train_photo_examples.npy'))
     scaler = MinMaxScaler()
     scaler.fit(train_photo_examples[:, 1:])
     data = scaler.transform(photo_examples[:, 1:])
@@ -84,7 +84,7 @@ def recommend(sub_prefix):
     print('Inferring..')
     magician_predicts_map = dict()
 
-    predict_data = pd.read_csv(os.path.join(preprocessing_photos.RAW_DATA_PATH, preprocessing_photos.DATASET_TEST_INTERACTION), delim_whitespace=True,
+    predict_data = pd.read_csv(os.path.join(preprocessing_photo_face_features.RAW_DATA_PATH, preprocessing_photo_face_features.DATASET_TEST_INTERACTION), delim_whitespace=True,
                                header=None, names=['user_id', 'photo_id', 'time', 'duration_time'])
     logger.write('Predict data size: {}'.format(predict_data.shape[0]) + '\n')
 
@@ -135,7 +135,7 @@ def recommend(sub_prefix):
     print('Saving prediction...')
     for rank, magician in enumerate(magicians):
         predict_data['click_prob'] = magician_predicts_map[magician.name]
-        predict_data.to_csv(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, sub_prefix + '-' + str(rank) + '_' + magician.name),
+        predict_data.to_csv(os.path.join(preprocessing_photo_face_features.DATA_HOUSE_PATH, sub_prefix + '-' + str(rank) + '_' + magician.name),
                             columns=['user_id', 'photo_id', 'click_prob'],
                             sep='\t', header=False, index=False, float_format='%.6f')
 

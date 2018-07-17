@@ -8,23 +8,23 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
 from scipy import sparse
 
-import preprocessing_photos
+import preprocessing_photo_face_features
 import numpy as np
 import time
 
 
 start = time.time()
 print('Loading data and models...')
-path = preprocessing_photos.RAW_DATA_PATH
+path = preprocessing_photo_face_features.RAW_DATA_PATH
 columns = ['user_id', 'photo_id', 'click', 'like', 'follow', 'time', 'playing_time', 'duration_time']
-train_interaction = pd.read_table(os.path.join(path, preprocessing_photos.DATASET_TRAIN_INTERACTION), header=None)
+train_interaction = pd.read_table(os.path.join(path, preprocessing_photo_face_features.DATASET_TRAIN_INTERACTION), header=None)
 train_interaction.columns = columns
 test_columns = ['user_id', 'photo_id', 'time', 'duration_time']
-test_interaction = pd.read_table(os.path.join(path, preprocessing_photos.DATASET_TEST_INTERACTION), header=None)
+test_interaction = pd.read_table(os.path.join(path, preprocessing_photo_face_features.DATASET_TEST_INTERACTION), header=None)
 test_interaction.columns = test_columns
 
-train_photo_topic = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, preprocessing_photos.TRAIN_FACE_FEATURES))
-test_photo_topic = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, preprocessing_photos.TEST_FACE_FEATURES))
+train_photo_topic = np.load(os.path.join(preprocessing_photo_face_features.CLEAN_DATA_PATH, preprocessing_photo_face_features.TRAIN_FACE_FEATURES))
+test_photo_topic = np.load(os.path.join(preprocessing_photo_face_features.CLEAN_DATA_PATH, preprocessing_photo_face_features.TEST_FACE_FEATURES))
 
 train_photo_features_idx_map = dict(zip(train_photo_topic[:, 0], range(train_photo_topic.shape[0])))
 test_photo_features_idx_map = dict(zip(test_photo_topic[:, 0], range(test_photo_topic.shape[0])))
@@ -42,7 +42,7 @@ train_interaction['looking'] = train_interaction['photo_id'].apply(
     lambda x: train_photo_topic[train_photo_features_idx_map[x], 5])
 # Replace real topic with index in embeddings.
 train_interaction['topic'] = train_interaction['photo_id'].apply(
-    lambda x: preprocessing_photos.common_word_idx_map.get(str(int(train_photo_topic[train_photo_features_idx_map[x], 6])), 0))
+    lambda x: preprocessing_photo_face_features.common_word_idx_map.get(str(int(train_photo_topic[train_photo_features_idx_map[x], 6])), 0))
 
 test_interaction['num_face'] = test_interaction['photo_id'].apply(
     lambda x: test_photo_topic[test_photo_features_idx_map[x], 1])
@@ -55,7 +55,7 @@ test_interaction['age'] = test_interaction['photo_id'].apply(
 test_interaction['looking'] = test_interaction['photo_id'].apply(
     lambda x: test_photo_topic[test_photo_features_idx_map[x], 5])
 test_interaction['topic'] = test_interaction['photo_id'].apply(
-    lambda x: preprocessing_photos.common_word_idx_map.get(str(int(test_photo_topic[test_photo_features_idx_map[x], 6])), 0))
+    lambda x: preprocessing_photo_face_features.common_word_idx_map.get(str(int(test_photo_topic[test_photo_features_idx_map[x], 6])), 0))
 
 
 print('Adding user features')
@@ -141,7 +141,7 @@ submission = pd.DataFrame()
 submission['user_id'] = test_interaction['user_id']
 submission['photo_id'] = test_interaction['photo_id']
 submission['click_probability'] = preds[:, 1]
-submission.to_csv(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'v1.0.3-no-topic-submission_rf.txt'), sep='\t', index=False, header=False,
+submission.to_csv(os.path.join(preprocessing_photo_face_features.DATA_HOUSE_PATH, 'v1.0.3-no-topic-submission_rf.txt'), sep='\t', index=False, header=False,
                   float_format='%.6f')
 
 print('Finished.')

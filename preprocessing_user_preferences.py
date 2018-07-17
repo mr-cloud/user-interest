@@ -4,7 +4,7 @@ import math
 import numpy as np
 import sys
 
-import preprocessing_photos
+import preprocessing_photo_face_features
 
 from utils import logger
 
@@ -75,9 +75,9 @@ def main():
     K1s = [10, 30, 100, 300, 1000]
     num_process_stats = list()
     for K1 in K1s:
-        num_process_stats.append(build_pop_examples(os.path.join(preprocessing_photos.RAW_DATA_PATH, preprocessing_photos.DATASET_TRAIN_INTERACTION),
-                           os.path.join(preprocessing_photos.DATA_HOUSE_PATH, 'photo-{}.pkl'.format(K1)),
-                           os.path.join(preprocessing_photos.CLEAN_DATA_PATH,
+        num_process_stats.append(build_pop_examples(os.path.join(preprocessing_photo_face_features.RAW_DATA_PATH, preprocessing_photo_face_features.DATASET_TRAIN_INTERACTION),
+                                                    os.path.join(preprocessing_photo_face_features.DATA_HOUSE_PATH, 'photo-{}.pkl'.format(K1)),
+                                                    os.path.join(preprocessing_photo_face_features.CLEAN_DATA_PATH,
                                         'pop_examples-{}.txt'.format(K1))))
 
     # print('Examples building finished.')

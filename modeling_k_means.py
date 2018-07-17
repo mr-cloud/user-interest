@@ -10,7 +10,7 @@ from sklearn.preprocessing import scale, MinMaxScaler
 import pandas as pd
 import os
 from sklearn.externals import joblib
-import preprocessing_photos
+import preprocessing_photo_face_features
 import datetime
 
 from utils import logger
@@ -85,18 +85,18 @@ def build_model_with_batch(data, K, name='k-means++', batch_size = 100, num_iter
 
 
 def modeling(pca_pic, pca_file, train_examples, Ks, model_name, batch_style_threshold=sys.maxsize, batch_size=1000, num_iter=1000, init_size=10000, n_init=3, max_no_improvement=30):
-    if not os.path.exists(os.path.join(preprocessing_photos.DATA_HOUSE_PATH, pca_pic)):
-        test_photo_examples = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, pca_file))
+    if not os.path.exists(os.path.join(preprocessing_photo_face_features.DATA_HOUSE_PATH, pca_pic)):
+        test_photo_examples = np.load(os.path.join(preprocessing_photo_face_features.CLEAN_DATA_PATH, pca_file))
         data = scale(test_photo_examples[:, 1:])
         K_viz = 10
         print('Started PCA exploring...')
-        viz_data(data, K_viz, os.path.join(preprocessing_photos.DATA_HOUSE_PATH, pca_pic))
+        viz_data(data, K_viz, os.path.join(preprocessing_photo_face_features.DATA_HOUSE_PATH, pca_pic))
         print('Finished PCA exploring.')
     else:
         print('Viz Model has been built!')
 
     print('Building basic features...')
-    train_photo_examples = np.load(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, train_examples))
+    train_photo_examples = np.load(os.path.join(preprocessing_photo_face_features.CLEAN_DATA_PATH, train_examples))
     scaler = MinMaxScaler()
     data = scaler.fit_transform(train_photo_examples[:, 1:])
     print('Data size: ', data.shape)
@@ -110,7 +110,7 @@ def modeling(pca_pic, pca_file, train_examples, Ks, model_name, batch_style_thre
             estimator = build_model(data, K)
         estimator.examples_id_ = train_photo_examples[:, 0]
         print('Saving model K={}...'.format(K))
-        joblib.dump(estimator, os.path.join(preprocessing_photos.DATA_HOUSE_PATH, model_name.format(K)))
+        joblib.dump(estimator, os.path.join(preprocessing_photo_face_features.DATA_HOUSE_PATH, model_name.format(K)))
         print('_' * 82 + '\n')
 
 
