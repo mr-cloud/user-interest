@@ -134,7 +134,7 @@ num_sampled = 64  # number of negative logits to sample (except label) for each 
 
 graph = tf.Graph()
 
-with graph.as_default(), tf.device('/cpu:0'):
+with graph.as_default():
     # Input data.
     train_dataset = tf.placeholder(tf.int32, shape=[batch_size])
     train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])

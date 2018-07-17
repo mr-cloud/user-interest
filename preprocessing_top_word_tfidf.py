@@ -2,6 +2,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 import os
 import numpy as np
+import pickle
 
 import preprocessing_photos
 
@@ -21,7 +22,6 @@ def load_data(filenames, prefix):
 
 
 filenames = [preprocessing_photos.DATASET_TRAIN_TEXT, preprocessing_photos.DATASET_TEST_TEXT]
-# filenames = ['sample_train_text.txt']
 prefix = preprocessing_photos.RAW_DATA_PATH
 corpus, photos_id = load_data(filenames, prefix)
 
@@ -30,16 +30,20 @@ counts = vectorizer.fit_transform(corpus)
 transformer = TfidfTransformer()
 tfidf = transformer.fit_transform(counts)
 print('Trained TF-IDF, size: ', tfidf.shape)
-maxargs = np.argmax(tfidf, axis=1)
-print('maxargs size: ', maxargs.shape)
-n_photos = maxargs.shape[0]
+arg_sort = np.argsort(tfidf, axis=1)
+# top 10
+tfidf = tfidf[:, arg_sort[int(tfidf.shape[1] * 0.9):]]
+print('top20 size: ', tfidf.shape)
+n_photos = tfidf.shape[0]
 print('#photos={}'.format(n_photos))
 features = vectorizer.get_feature_names()
 print('#features={}'.format(len(features)))
-with open(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'photo_topic.txt'), 'w') as output:
-    for ind in range(maxargs.shape[0]):
+photo_topic = map()
+with open(os.path.join(preprocessing_photos.CLEAN_DATA_PATH, 'photo_topic.pkl'), 'wb') as output:
+    for ind in range(tfidf.shape[0]):
         if ind % 10000 == 0:
             print('Writing #{}'.format(ind))
-        output.write('{} {}\n'.format(photos_id[ind], features[maxargs[ind, 0]]))
-        output.flush()
+        photo_topic[photos_id[ind]] = features[tfidf[ind]]
+    print('dumping...')
+    pickle.dump(photo_topic, output, pickle.HIGHEST_PROTOCOL)
 print('Finished')

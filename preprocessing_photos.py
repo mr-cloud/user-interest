@@ -18,15 +18,15 @@ DATASET_TEST_TEXT = 'sample_test_text.txt'
 DATASET_TRAIN_FACE = 'sample_train_face.txt'
 DATASET_TRAIN_INTERACTION = 'sample_train_interaction.txt'
 DATASET_TRAIN_TEXT = 'sample_train_text.txt'
-DATASET_TEST_FACE = 'test_face.txt'
-DATASET_TEST_INTERACTION = 'test_interaction.txt'
-DATASET_TEST_TEXT = 'test_text.txt'
-DATASET_TRAIN_FACE = 'train_face.txt'
-DATASET_TRAIN_INTERACTION = 'train_interaction.txt'
-DATASET_TRAIN_TEXT = 'train_text.txt'
+# DATASET_TEST_FACE = 'test_face.txt'
+# DATASET_TEST_INTERACTION = 'test_interaction.txt'
+# DATASET_TEST_TEXT = 'test_text.txt'
+# DATASET_TRAIN_FACE = 'train_face.txt'
+# DATASET_TRAIN_INTERACTION = 'train_interaction.txt'
+# DATASET_TRAIN_TEXT = 'train_text.txt'
 
-TRAIN_PHOTO_EXAMPLE_WITH_TOPIC = 'train_photo_examples-topic.npy'
-TEST_PHOTO_EXAMPLE_WITH_TOPIC = 'test_photo_examples-topic.npy'
+TRAIN_FACE_FEATURES = 'train_face_features.txt'
+TEST_FACE_FEATURES = 'test_face_features.txt'
 
 NUM_FACE_FEATURE = 5
 
