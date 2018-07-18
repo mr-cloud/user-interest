@@ -9,7 +9,7 @@ if not os.path.exists(CLEAN_DATA_PATH):
 if not os.path.exists(RAW_DATA_PATH):
     os.makedirs(RAW_DATA_PATH)
 
-is_debuggable = True
+is_debuggable = False
 
 DATASET_TEST_FACE = 'test_face.txt'
 DATASET_TEST_INTERACTION = 'test_interaction.txt'

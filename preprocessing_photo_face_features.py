@@ -17,7 +17,7 @@ NUM_FACE_FEATURE = 5
 
 def build_photo_face_features(face_files: tuple, output_filename):
     # photo_id is int
-    photo_face = map()
+    photo_face = dict()
     cnt = 0
     for face_filename in face_files:
         with open(face_filename, 'r') as face_file:
@@ -45,7 +45,9 @@ def build_photo_face_features(face_files: tuple, output_filename):
 
 
 def main():
-    build_photo_face_features((consts.DATASET_TRAIN_FACE, consts.DATASET_TEST_FACE), os.path.join(consts.CLEAN_DATA_PATH, 'photo_face_features.pkl'))
+    build_photo_face_features([os.path.join(consts.RAW_DATA_PATH, consts.DATASET_TRAIN_FACE),
+                               os.path.join(consts.RAW_DATA_PATH, consts.DATASET_TEST_FACE)],
+                               os.path.join(consts.CLEAN_DATA_PATH, 'photo_face_features.pkl'))
     logger.write('Finished.' + '\n')
 
 
