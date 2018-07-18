@@ -31,16 +31,20 @@ counts = vectorizer.fit_transform(corpus)
 transformer = TfidfTransformer()
 tfidf = transformer.fit_transform(counts)
 print('Trained TF-IDF, size: ', tfidf.shape)
-# XXX
-arg_sort = np.argsort(tfidf, axis=1)
-# top 10
-tfidf = tfidf[:, arg_sort[int(tfidf.shape[1] * 0.9):]]
-print('top20 size: ', tfidf.shape)
+top_tfidf = np.ndarray(shape=(tfidf.shape[0], int(tfidf.shape[1] * 0.1)), dtype=np.int32)
+for ind, row in enumerate(tfidf):
+    row = row.toarray().flatten()
+    arg_sort = np.argsort(-row)
+    # top 10%
+    top_tfidf[ind] = arg_sort[:int(tfidf.shape[1] * 0.1)]
+tfidf = top_tfidf
+print('top10% size: ', tfidf.shape)
 n_photos = tfidf.shape[0]
 print('#photos={}'.format(n_photos))
 features = vectorizer.get_feature_names()
+features = np.array(features)
 print('#features={}'.format(len(features)))
-photo_topic = map()
+photo_topic = dict()
 with open(os.path.join(consts.CLEAN_DATA_PATH, 'photo_topic.pkl'), 'wb') as output:
     for ind in range(tfidf.shape[0]):
         if ind % 10000 == 0:
