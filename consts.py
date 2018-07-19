@@ -26,3 +26,5 @@ if is_debuggable:
     DATASET_TRAIN_INTERACTION = 'sample_train_interaction.txt'
     DATASET_TRAIN_TEXT = 'sample_train_text.txt'
 
+
+COMMON_WORDS_COUNTER = 'common-words-counter.txt'

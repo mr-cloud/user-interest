@@ -123,7 +123,7 @@ def main():
     print('Sample data', data[:10])
     del words  # Hint to reduce memory.
     print('Saving common words counter with index...')
-    with open(os.path.join(consts.CLEAN_DATA_PATH, 'common-words-counter.txt'), 'w') as output:
+    with open(os.path.join(consts.CLEAN_DATA_PATH, consts.COMMON_WORDS_COUNTER), 'w') as output:
         for wc in count:
             output.write('{} {}\n'.format(wc[0], wc[1]))
 
