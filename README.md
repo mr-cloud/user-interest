@@ -113,11 +113,13 @@
     - users number: 37821
     - 用户交互次数主要分布在1000至2000，近似Poisson分布
 - features
-    - 用户。构建兴趣空间向量，对于每个用户，用交互行为中的作品的空间向量以时间加权。
+    - 用户。构建兴趣空间向量，对于每个用户，交互行为中正例的作品空间向量以交互时间加权。
     - 作品。人脸 --> 文字 --> 图像。duration_time, num_face, face_occu, gender_pref, age, looking, context
     - 交互时间戳。time
+    - *photo_face_features.pkl*, *embeddings.npy*, *common-words-counter.txt*, *photo_topic.pkl*
+    - 
 - model
     - NN with regression (0, 3)
 - predict
-    - output shit-mapping to (0, 1)
+    - output shift-mapping to (0, 1)
 

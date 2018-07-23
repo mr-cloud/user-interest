@@ -28,3 +28,7 @@ if is_debuggable:
 
 
 COMMON_WORDS_COUNTER = 'common-words-counter.txt'
+PHOTO_FACE_FEATURES = 'photo_face_features.pkl'
+PHOTO_FACE_FEATURES_NORM = 'photo_face_features_normalized.pkl'
+EMBEDDINGS = 'embeddings.npy'
+PHOTO_TOPIC_FEATURES = 'photo_topic.pkl'

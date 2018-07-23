@@ -41,30 +41,30 @@ def main():
     transformer = TfidfTransformer()
     tfidf = transformer.fit_transform(counts)
     print('Trained TF-IDF, size: ', tfidf.shape)
-    top_tfidf = dict()
-    n_words = 0
-    for ind, row in enumerate(tfidf):
-        row = row.toarray().flatten()
-        arg_sort = np.argsort(-row)
-        # top 30%
-        words = [word for word in corpus[ind].split(',') if word in common_words]
-        len_desc = int(len(words) * 0.3)
-        top_tfidf[ind] = arg_sort[:len_desc]
-        n_words += len_desc
-    tfidf = top_tfidf
-    n_photos = len(tfidf)
-    print('#photos={}, #words in total: {}, #words in avg: {}'.format(n_photos, n_words, n_words/n_photos))
     features = vectorizer.get_feature_names()
     features = np.array(features)
     print('#features={}'.format(len(features)))
+
+    n_words = 0
+    n_photos = len(photos_id)
     photo_topic = dict()
     with open(os.path.join(consts.CLEAN_DATA_PATH, 'photo_topic.pkl'), 'wb') as output:
-        for ind in range(n_photos):
+        for ind, row in enumerate(tfidf):
             if ind % 10000 == 0:
-                print('Writing #{}'.format(ind))
-            photo_topic[photos_id[ind]] = features[tfidf[ind]]
+                print('Top-processing #{}'.format(ind))
+            row = row.toarray().flatten()
+            arg_sort = np.argsort(-row)
+            # top 20%
+            words = [word for word in corpus[ind].split(',') if word in common_words]
+            # at least three word if content supports(主谓宾)
+            len_desc = min(max(3, int(len(words) * 0.2)), len(words))
+            photo_topic[photos_id[ind]] = features[arg_sort[:len_desc]]
+            n_words += len_desc
+
         print('dumping...')
         pickle.dump(photo_topic, output, pickle.HIGHEST_PROTOCOL)
+
+    print('#photos={}, #words in total: {}, #words in avg: {}'.format(n_photos, n_words, n_words/n_photos))
     print('Finished')
 
 
