@@ -12,6 +12,7 @@ from sklearn.manifold import TSNE
 
 import consts
 
+EMBEDDING_SIZE = 128
 
 vocabulary_size = 50000
 data_index = 0
@@ -139,7 +140,7 @@ def main():
         print('    labels:', [reverse_dictionary[li] for li in labels.reshape(8)])
 
     batch_size = 128
-    embedding_size = 128  # Dimension of the embedding vector.
+    embedding_size = EMBEDDING_SIZE  # Dimension of the embedding vector.
     skip_window = 1  # How many words to consider left and right.
     num_skips = 2  # How many times to reuse an input to generate a label.
     # We pick a random validation set to sample nearest neighbors. here we limit the
