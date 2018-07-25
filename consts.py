@@ -9,7 +9,7 @@ if not os.path.exists(CLEAN_DATA_PATH):
 if not os.path.exists(RAW_DATA_PATH):
     os.makedirs(RAW_DATA_PATH)
 
-is_debuggable = False
+is_debuggable = True
 
 DATASET_TEST_FACE = 'test_face.txt'
 DATASET_TEST_INTERACTION = 'test_interaction.txt'
@@ -32,3 +32,4 @@ PHOTO_FACE_FEATURES = 'photo_face_features.pkl'
 PHOTO_FACE_FEATURES_NORM = 'photo_face_features_normalized.pkl'
 EMBEDDINGS = 'embeddings.npy'
 PHOTO_TOPIC_FEATURES = 'photo_topic.pkl'
+USER_VECTOR_SPACE = 'user-vector-space.pkl'
