@@ -1,5 +1,7 @@
 import os
 import pickle
+import sys
+
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
@@ -14,7 +16,6 @@ common_words_counter = pd.read_csv(os.path.join(consts.CLEAN_DATA_PATH, consts.C
 word_indexer = dict(zip(common_words_counter['word'], range(common_words_counter.shape[0])))
 common_words_counter['word'] = common_words_counter['word'].astype(str)
 common_words_counter['counter'] = common_words_counter['counter'].astype(int)
-word_to_embed = dict(zip(common_words_counter['word'], range(common_words_counter.shape[0])))
 
 with open(os.path.join(consts.CLEAN_DATA_PATH, consts.EMBEDDINGS), 'rb') as input:
     embeddings = np.load(input)
@@ -27,7 +28,7 @@ with open(os.path.join(consts.CLEAN_DATA_PATH, consts.PHOTO_FACE_FEATURES_NORM),
 columns = ['user_id', 'photo_id', 'click', 'like', 'follow', 'time', 'playing_time', 'duration_time']
 train_interaction = pd.read_table(os.path.join(consts.RAW_DATA_PATH, consts.DATASET_TRAIN_INTERACTION), header=None,
                                   names=columns)
-score = np.ndarray(shape=(train_interaction.shape[0]), dtype=np.int32)
+score = np.zeros(shape=(train_interaction.shape[0]), dtype=np.float32)
 for ind in range(train_interaction.shape[0]):
     if ind % 10000 == 0:
         print('Score processing #{}...'.format(ind))
@@ -37,12 +38,17 @@ for ind in range(train_interaction.shape[0]):
         score[ind] = 2.0/3
     elif train_interaction.loc[ind, 'click'] == 1:
         # weighted by playing time
-        score[ind] = 1.0/3 * train_interaction.loc[ind, 'playing_time'] / train_interaction.loc[ind, 'duration_time']
+        if train_interaction.loc[ind, 'duration_time'] == 0:
+            w_play = 0
+        else:
+            w_play = train_interaction.loc[ind, 'playing_time'] / train_interaction.loc[ind, 'duration_time']
+        score[ind] = 1.0/3 * w_play
+    else:
+        pass
 train_interaction['label'] = score
-time_sum = train_interaction.groupby('user_id')['time'].sum().to_dict()
 scaler = MinMaxScaler()
-train_interaction['duration_time'] = scaler.fit_transform(train_interaction['duration_time'].values.reshape(-1, 1)).flatten()
-# weighted by (score * time)
+train_interaction[['time', 'duration_time']] = scaler.fit_transform(train_interaction[['time', 'duration_time']])
+
 user_vector_space = dict()
 n_feature = 1 + NUM_FACE_FEATURE + EMBEDDING_SIZE
 
@@ -69,15 +75,26 @@ def get_user_vector(uid):
     return user_vector_space[uid]
 
 
+user_act_counts = dict()
+
 for ind in range(train_interaction.shape[0]):
     if ind % 10000 == 0:
         print('User vector extracting #{}...'.format(ind))
+    # weighted by (score * time)
+    weight = train_interaction.loc[ind, 'time'] * train_interaction.loc[ind, 'label']
+    if weight < sys.float_info.min:
+        continue
     user_id = train_interaction.loc[ind, 'user_id']
     photo_id = train_interaction.loc[ind, 'photo_id']
-    weight = train_interaction.loc[ind, 'time'] / time_sum.get(user_id) * train_interaction.loc[ind, 'label']
     photo_feature = build_photo_feature(pid=photo_id, duration=train_interaction.loc[ind, 'duration_time'])
     user_vector = get_user_vector(uid=user_id)
     user_vector += weight * photo_feature
+    if user_id in user_act_counts:
+        weight += user_act_counts[user_id]
+    user_act_counts[user_id] = weight
+
+for uid, feature in user_vector_space.items():
+    user_vector_space[uid] = feature / user_act_counts[uid]
 
 del train_interaction
 print('#users=', len(user_vector_space))
