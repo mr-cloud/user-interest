@@ -52,18 +52,26 @@ train_interaction[['time', 'duration_time']] = scaler.fit_transform(train_intera
 user_vector_space = dict()
 n_feature = 1 + NUM_FACE_FEATURE + EMBEDDING_SIZE
 
+num_no_topic = 0
+num_no_face = 0
+
 
 def build_photo_feature(pid, duration):
-    feature = np.ndarray(shape=n_feature, dtype=np.float32)
+    global num_no_topic
+    global num_no_face
+    feature = np.zeros(shape=n_feature, dtype=np.float32)
     feature[-1] = duration
-    if pid not in photo_face:
-        feature[0: NUM_FACE_FEATURE] = np.zeros(shape=NUM_FACE_FEATURE, dtype=np.float32)
-    else:
+    if pid in photo_face:
         feature[0: NUM_FACE_FEATURE] = photo_face[pid]
+    else:
+        num_no_face += 1
     topic_feature = np.zeros(shape=EMBEDDING_SIZE, dtype=np.float32)
-    for word in photo_topic[pid]:
-        topic_feature += embeddings[word_indexer[word]]
-    topic_feature /= len(photo_topic[pid])
+    if len(photo_topic[pid]) != 0:
+        for word in photo_topic[pid]:
+            topic_feature += embeddings[word_indexer[word]]
+            topic_feature = topic_feature / len(photo_topic[pid])
+    else:
+        num_no_topic += 1
     feature[NUM_FACE_FEATURE: NUM_FACE_FEATURE + EMBEDDING_SIZE] = topic_feature
     return feature
 
@@ -96,8 +104,11 @@ for ind in range(train_interaction.shape[0]):
 for uid, feature in user_vector_space.items():
     user_vector_space[uid] = feature / user_act_counts[uid]
 
-del train_interaction
 print('#users=', len(user_vector_space))
+print('#total interacts:', train_interaction.shape[0])
+print('#interact which has no topic info: ', num_no_topic)
+print('#interact which has no face info: ', num_no_face)
+del train_interaction
 with open(os.path.join(consts.CLEAN_DATA_PATH, consts.USER_VECTOR_SPACE), 'wb') as output:
     pickle.dump(user_vector_space, output, pickle.HIGHEST_PROTOCOL)
 

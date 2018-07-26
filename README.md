@@ -30,6 +30,11 @@
 - train_interaction.txt
     - 5.2E7
     - 其中用户数为1.5E4
+    - > \#users= 37821  
+            \#total interacts: 52134536    
+            \#interact which has no topic info:  40047   
+            \#interact which has no face info:  3399351
+
 - train_face.txt
     - 3.0E6
     - 不是所有作品都有人脸数据

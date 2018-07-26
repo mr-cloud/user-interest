@@ -1,4 +1,5 @@
 import pickle
+import sys
 
 import tensorflow as tf
 import numpy as np
@@ -13,6 +14,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.utils import resample
 
 import consts
+from utils import logger
 
 
 def metric(prediction, target):
@@ -21,9 +23,6 @@ def metric(prediction, target):
     except ValueError:
         return 1.0
 
-
-def stitch_topic_features(data):
-    return data[:, :-1]
 
 
 start_point = time.time()
@@ -50,30 +49,68 @@ train_interaction = pd.read_table(os.path.join(consts.RAW_DATA_PATH, consts.DATA
 test_columns = ['user_id', 'photo_id', 'time', 'duration_time']
 test_interaction = pd.read_table(os.path.join(consts.RAW_DATA_PATH, consts.DATASET_TEST_INTERACTION),
                                  header=None, names=test_columns)
-
 print('Data size: #train={}, #test={}'.format(train_interaction.shape[0], test_interaction.shape[0]))
 
-# sample some data for cross-validation and metric evaluation TODO
-train_dataset, test_dataset, train_labels, test_labels = train_test_split(dataset, labels)
-train_dataset, valid_dataset, train_labels, valid_labels = train_test_split(train_dataset, train_labels)
-test_dataset, test_labels = resample(test_dataset, test_labels, replace=False, n_samples=int(0.1/3 * len(test_labels)))
-valid_dataset, valid_labels = resample(valid_dataset, valid_labels, replace=False, n_samples=int(0.01/3 * len(valid_labels)))
-test_dataset = stitch_topic_features(test_dataset)
-valid_dataset = stitch_topic_features(valid_dataset)
+# data cleaning and normalization
+print('normalizing...')
+score = np.zeros(shape=(train_interaction.shape[0]), dtype=np.float32)
+for ind in range(train_interaction.shape[0]):
+    if ind % 10000 == 0:
+        print('Score processing #{}...'.format(ind))
+    if train_interaction.loc[ind, 'follow'] == 1:
+        score[ind] = 3.0/3
+    elif train_interaction.loc[ind, 'like'] == 1:
+        score[ind] = 2.0/3
+    elif train_interaction.loc[ind, 'click'] == 1:
+        # weighted by playing time
+        if train_interaction.loc[ind, 'duration_time'] == 0:
+            w_play = 0
+        else:
+            w_play = train_interaction.loc[ind, 'playing_time'] / train_interaction.loc[ind, 'duration_time']
+        score[ind] = 1.0/3 * w_play
+    else:
+        pass
+train_interaction['label'] = score
+
+scaler = MinMaxScaler()
+train_interaction[['time', 'duration_time']] = scaler.fit_transform(train_interaction[['time', 'duration_time']])
+test_interaction[['time', 'duration_time']] = scaler.transform(test_interaction[['time', 'duration_time']])
+train_interaction = train_interaction[test_columns.append('label')]
+print('Cleaned data size: ', train_interaction.shape)
+
+# subsample
+(pos_example_idx, ) = np.where(train_interaction['label'] >= sys.float_info.min)
+(neg_example_idx, ) = np.where(train_interaction['label'] < sys.float_info.min)
+neg_example_idx = resample(neg_example_idx, replace=False, n_samples=min(len(neg_example_idx), 2 * len(pos_example_idx)))
+train_interaction = train_interaction.iloc[np.hstack([pos_example_idx, neg_example_idx]), :]
+print('Subsample data size: ', train_interaction.shape)
+
+
+# TODO
+def stitch_topic_features(data):
+    return data[:, :-1]
+
+
+# sample some data for cross-validation and metric evaluation
+dataset_idx = np.arange(train_interaction.shape[0])
+train_dataset_idx, test_dataset_idx = train_test_split(dataset_idx)
+train_dataset_idx, valid_dataset_idx = train_test_split(train_dataset_idx)
+test_dataset_idx = resample(test_dataset_idx, replace=False, n_samples=int(0.1 * len(test_dataset_idx) / 3))
+valid_dataset_idx= resample(valid_dataset_idx, replace=False, n_samples=int(0.01 * len(valid_dataset_idx) / 3))
+test_dataset, test_labels = stitch_topic_features(train_interaction.iloc[test_dataset_idx, :])
+valid_dataset, valid_labels = stitch_topic_features(train_interaction.iloc[valid_dataset_idx, :])
 data_pre_time_cost = '\nData preprocessing time: {} min'.format((time.time() - start_point) / 60)
 print(data_pre_time_cost)
-preprocessing_photo_face_features.logger.write(data_pre_time_cost)
+logger.write(data_pre_time_cost)
 
-del dataset
-del labels
-
+del train_interaction
 
 n_label = 2
 n_dim = test_dataset.shape[1]
 scalers = np.array([1])
 batch_base = 1000
 batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
-num_steps_grid = train_dataset.shape[0] // batch_size_grid
+num_steps_grid = len(dataset_idx) // batch_size_grid
 num_epoch = 1
 report_interval_grid = num_steps_grid // 100
 initial_learning_rate_grid = [0.05]
@@ -209,14 +246,14 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     # plt.show()
                     time_consume = '\n{}, Cost time: {} min, regularization: {}, learning rate: {}, final learning rate: {}, batch size: {}\n'.format('nn5', (time.time() - start_point) / 60, wl, initial_learning_rate, final_learning_rate, batch_size)
                     print(time_consume)
-                    preprocessing_photo_face_features.logger.write(time_consume)
+                    logger.write(time_consume)
                     topology = 'f1={}-f2={}-f3={}-f4={}'.format(f1_depth, f2_depth, f3_depth, f4_depth )
                     print(topology + '\n')
                     plt.savefig('datahouse/learning-curve-{}-{}-{}-{}-'.format(wl, initial_learning_rate, final_learning_rate, batch_size) + topology + '.png')
-                    preprocessing_photo_face_features.logger.write(topology + '\n')
+                    logger.write(topology + '\n')
                     metrics = 'valid metric: {}, test metric: {}\n'.format(vm, epoch_test_metric)
                     print(metrics)
-                    preprocessing_photo_face_features.logger.write(metrics)
+                    logger.write(metrics)
 
                     print('Predicting...')
                     # comment this when only one model is trained.
@@ -244,7 +281,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     submission['photo_id'] = test_interaction['photo_id']
                     submission['click_probability'] = preds_rst
                     submission.to_csv(
-                        os.path.join(preprocessing_photo_face_features.DATA_HOUSE_PATH, 'v1.1.0-without-topic-submission_nn5.txt'),
+                        os.path.join(consts.DATA_HOUSE_PATH, 'v1.1.0-without-topic-submission_nn5.txt'),
                         sep='\t', index=False, header=False,
                         float_format='%.6f')
                     print('Finished.')
