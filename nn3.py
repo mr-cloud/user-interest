@@ -15,6 +15,8 @@ from sklearn.utils import resample
 
 import consts
 from utils import logger
+from preprocessing_photo_face_features import NUM_FACE_FEATURE
+from preprocessing_text_feature_embedding import EMBEDDING_SIZE
 
 
 def metric(prediction, target):
@@ -27,22 +29,7 @@ def metric(prediction, target):
 
 start_point = time.time()
 
-print('Loading data and models...')
-common_words_counter = pd.read_csv(os.path.join(consts.CLEAN_DATA_PATH, consts.COMMON_WORDS_COUNTER),
-                                   sep=' ', header=None, index_col=False, names=['word', 'counter'])
-word_indexer = dict(zip(common_words_counter['word'], range(common_words_counter.shape[0])))
-common_words_counter['word'] = common_words_counter['word'].astype(str)
-common_words_counter['counter'] = common_words_counter['counter'].astype(int)
-
-with open(os.path.join(consts.CLEAN_DATA_PATH, consts.EMBEDDINGS), 'rb') as input:
-    embeddings = np.load(input)
-with open(os.path.join(consts.CLEAN_DATA_PATH, consts.PHOTO_TOPIC_FEATURES), 'rb') as input:
-    photo_topic = pickle.load(input)
-with open(os.path.join(consts.CLEAN_DATA_PATH, consts.PHOTO_FACE_FEATURES_NORM), 'rb') as input:
-    photo_face = pickle.load(input)
-with open(os.path.join(consts.CLEAN_DATA_PATH, consts.USER_VECTOR_SPACE), 'rb') as input:
-    user_vector_space = pickle.load(input)
-
+print('Loading interaction data...')
 columns = ['user_id', 'photo_id', 'click', 'like', 'follow', 'time', 'playing_time', 'duration_time']
 train_interaction = pd.read_table(os.path.join(consts.RAW_DATA_PATH, consts.DATASET_TRAIN_INTERACTION),
                                   header=None, names=columns)
@@ -86,9 +73,55 @@ train_interaction = train_interaction.iloc[np.hstack([pos_example_idx, neg_examp
 print('Subsample data size: ', train_interaction.shape)
 
 
-# TODO
-def stitch_topic_features(data):
-    return data[:, :-1]
+print('loading models...')
+common_words_counter = pd.read_csv(os.path.join(consts.CLEAN_DATA_PATH, consts.COMMON_WORDS_COUNTER),
+                                   sep=' ', header=None, index_col=False, names=['word', 'counter'])
+word_indexer = dict(zip(common_words_counter['word'], range(common_words_counter.shape[0])))
+common_words_counter['word'] = common_words_counter['word'].astype(str)
+common_words_counter['counter'] = common_words_counter['counter'].astype(int)
+
+with open(os.path.join(consts.CLEAN_DATA_PATH, consts.EMBEDDINGS), 'rb') as input:
+    embeddings = np.load(input)
+with open(os.path.join(consts.CLEAN_DATA_PATH, consts.PHOTO_TOPIC_FEATURES), 'rb') as input:
+    photo_topic = pickle.load(input)
+with open(os.path.join(consts.CLEAN_DATA_PATH, consts.PHOTO_FACE_FEATURES_NORM), 'rb') as input:
+    photo_face = pickle.load(input)
+with open(os.path.join(consts.CLEAN_DATA_PATH, consts.USER_VECTOR_SPACE), 'rb') as input:
+    user_vector_space = pickle.load(input)
+
+n_feature = 1 + NUM_FACE_FEATURE + EMBEDDING_SIZE
+
+
+def build_photo_feature(pid, duration):
+    feature = np.zeros(shape=n_feature, dtype=np.float32)
+    feature[-1] = duration
+    if pid in photo_face:
+        feature[0: NUM_FACE_FEATURE] = photo_face[pid]
+    topic_feature = np.zeros(shape=EMBEDDING_SIZE, dtype=np.float32)
+    if len(photo_topic[pid]) != 0:
+        for word in photo_topic[pid]:
+            topic_feature += embeddings[word_indexer[word]]
+            topic_feature = topic_feature / len(photo_topic[pid])
+    feature[NUM_FACE_FEATURE: NUM_FACE_FEATURE + EMBEDDING_SIZE] = topic_feature
+    return feature
+
+
+def get_user_vector(uid):
+    if uid not in user_vector_space:
+        vector = np.zeros(shape=n_feature, dtype=np.float32)
+        user_vector_space[uid] = vector
+    return user_vector_space[uid]
+
+
+def stitch_topic_features(interacts):
+    dataset = np.zeros(shape=(interacts.shape[0], n_feature * 2 + 1))
+    for idx in range(dataset.shape[0]):
+        dataset[idx, :n_feature] = get_user_vector(interacts.loc[idx, 'user_id'])
+        dataset[idx, n_feature: n_feature*2] = build_photo_feature(interacts.loc[idx, 'photo_id'],
+                                                                      interacts.loc[idx, 'duration_time'])
+        dataset[idx, -1] = interacts.loc[idx, 'time']
+    labels = np.array(interacts['label'])
+    return dataset, labels
 
 
 # sample some data for cross-validation and metric evaluation
@@ -105,22 +138,20 @@ logger.write(data_pre_time_cost)
 
 del train_interaction
 
-n_label = 2
+n_label = 1
 n_dim = test_dataset.shape[1]
 scalers = np.array([1])
 batch_base = 1000
 batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
-num_steps_grid = len(dataset_idx) // batch_size_grid
+num_steps_grid = len(train_dataset_idx) // batch_size_grid
 num_epoch = 1
 report_interval_grid = num_steps_grid // 100
 initial_learning_rate_grid = [0.05]
 final_learning_rate_grid = [0.025]
 
 # hidden layers
-f1_depth = n_dim * 30
-f2_depth = n_dim * 90
-f3_depth = n_dim * 30
-f4_depth = n_dim * 10
+f1_depth = n_dim * 3
+f2_depth = n_dim * 10
 
 # L2 regularization
 lambdas = [0.0]
@@ -164,19 +195,13 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                 biases1 = tf.Variable(tf.ones([f1_depth]))
                 weights2 = variable_with_weight_loss([f1_depth, f2_depth], wl, 'weights2')
                 biases2 = tf.Variable(tf.ones([f2_depth]))
-                weights3 = variable_with_weight_loss([f2_depth, f3_depth], wl, 'weights3')
-                biases3 = tf.Variable(tf.ones([f3_depth]))
-                weights4 = variable_with_weight_loss([f3_depth, f4_depth], wl, 'weights4')
-                biases4 = tf.Variable(tf.ones([f4_depth]))
-                readout_weights = variable_with_weight_loss([f4_depth, n_label], wl, 'readout_weights')
+                readout_weights = variable_with_weight_loss([f2_depth, n_label], wl, 'readout_weights')
                 readout_biases = tf.Variable(tf.zeros([n_label]))
 
                 def model(data):
                     f1 = tf.nn.relu(tf.nn.xw_plus_b(data, weights1, biases1))
                     f2 = tf.nn.relu(tf.nn.xw_plus_b(f1, weights2, biases2))
-                    f3 = tf.nn.relu(tf.nn.xw_plus_b(f2, weights3, biases3))
-                    f4 = tf.nn.relu(tf.nn.xw_plus_b(f3, weights4, biases4))
-                    logits = tf.matmul(f4, readout_weights) + readout_biases
+                    logits = tf.matmul(f2, readout_weights) + readout_biases
                     return logits
 
 
@@ -184,7 +209,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
 
                 def loss(logits, labels):
                     # doc typo-error for ValueException
-                    # ValueError: Rank mismatch: Rank of labels should equal rank of logits minus 1.
+                    # ValueError: Rank mismatch: Rank of labels should equal rank of logits minus 1. TODO
                     err = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits))
                     tf.add_to_collection('losses', err)
                     return tf.add_n(tf.get_collection('losses'), name='total_loss')
@@ -244,10 +269,10 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
 
                     plt.subplots_adjust(hspace=0.5)
                     # plt.show()
-                    time_consume = '\n{}, Cost time: {} min, regularization: {}, learning rate: {}, final learning rate: {}, batch size: {}\n'.format('nn5', (time.time() - start_point) / 60, wl, initial_learning_rate, final_learning_rate, batch_size)
+                    time_consume = '\n{}, Cost time: {} min, regularization: {}, learning rate: {}, final learning rate: {}, batch size: {}\n'.format('nn3', (time.time() - start_point) / 60, wl, initial_learning_rate, final_learning_rate, batch_size)
                     print(time_consume)
                     logger.write(time_consume)
-                    topology = 'f1={}-f2={}-f3={}-f4={}'.format(f1_depth, f2_depth, f3_depth, f4_depth )
+                    topology = 'f1={}-f2={}'.format(f1_depth, f2_depth )
                     print(topology + '\n')
                     plt.savefig('datahouse/learning-curve-{}-{}-{}-{}-'.format(wl, initial_learning_rate, final_learning_rate, batch_size) + topology + '.png')
                     logger.write(topology + '\n')
@@ -281,7 +306,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     submission['photo_id'] = test_interaction['photo_id']
                     submission['click_probability'] = preds_rst
                     submission.to_csv(
-                        os.path.join(consts.DATA_HOUSE_PATH, 'v1.1.0-without-topic-submission_nn5.txt'),
+                        os.path.join(consts.DATA_HOUSE_PATH, 'v2.0.0-without-image-submission_nn3.txt'),
                         sep='\t', index=False, header=False,
                         float_format='%.6f')
                     print('Finished.')
