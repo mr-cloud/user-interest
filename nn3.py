@@ -21,7 +21,7 @@ from preprocessing_text_feature_embedding import EMBEDDING_SIZE
 
 def metric(prediction, target):
     try:
-        return roc_auc_score(target, prediction[:, 1])
+        return roc_auc_score(target, prediction)
     except ValueError:
         return 1.0
 
@@ -36,7 +36,7 @@ train_interaction = pd.read_table(os.path.join(consts.RAW_DATA_PATH, consts.DATA
 test_columns = ['user_id', 'photo_id', 'time', 'duration_time']
 test_interaction = pd.read_table(os.path.join(consts.RAW_DATA_PATH, consts.DATASET_TEST_INTERACTION),
                                  header=None, names=test_columns)
-print('Data size: #train={}, #test={}'.format(train_interaction.shape[0], test_interaction.shape[0]))
+print('Data size: #train={}, #submit={}'.format(train_interaction.shape[0], test_interaction.shape[0]))
 
 # data cleaning and normalization
 print('normalizing...')
@@ -113,15 +113,18 @@ def get_user_vector(uid):
     return user_vector_space[uid]
 
 
-def stitch_topic_features(interacts):
+def stitch_topic_features(interacts: pd.Dataframe):
     dataset = np.zeros(shape=(interacts.shape[0], n_feature * 2 + 1))
     for idx in range(dataset.shape[0]):
         dataset[idx, :n_feature] = get_user_vector(interacts.loc[idx, 'user_id'])
         dataset[idx, n_feature: n_feature*2] = build_photo_feature(interacts.loc[idx, 'photo_id'],
                                                                       interacts.loc[idx, 'duration_time'])
         dataset[idx, -1] = interacts.loc[idx, 'time']
-    labels = np.array(interacts['label'])
-    return dataset, labels
+    if 'label' in interacts.columns:
+        labels = np.array(interacts['label'])
+        return dataset, labels
+    else:
+        return dataset
 
 
 # sample some data for cross-validation and metric evaluation
@@ -136,7 +139,8 @@ data_pre_time_cost = '\nData preprocessing time: {} min'.format((time.time() - s
 print(data_pre_time_cost)
 logger.write(data_pre_time_cost)
 
-del train_interaction
+train_interaction = train_interaction.iloc[train_dataset_idx, :]
+print('data size: train={}, valid={}, test={}'.format(train_interaction.shape[0], valid_dataset.shape[0], test_dataset.shape[0]))
 
 n_label = 1
 n_dim = test_dataset.shape[1]
@@ -150,8 +154,8 @@ initial_learning_rate_grid = [0.05]
 final_learning_rate_grid = [0.025]
 
 # hidden layers
-f1_depth = n_dim * 3
-f2_depth = n_dim * 10
+f1_depth = n_dim * 10
+f2_depth = n_dim * 3
 
 # L2 regularization
 lambdas = [0.0]
@@ -208,9 +212,8 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                 logits = model(tf_train_dataset)
 
                 def loss(logits, labels):
-                    # doc typo-error for ValueException
-                    # ValueError: Rank mismatch: Rank of labels should equal rank of logits minus 1. TODO
-                    err = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits))
+                    # MSE error
+                    err = tf.losses.mean_squared_error(labels=labels, predictions=logits)
                     tf.add_to_collection('losses', err)
                     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
@@ -219,21 +222,18 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                 optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step)
 
                 # Predictions for the training, validation, and test data.
-                train_prediction = tf.nn.softmax(logits)
-                valid_prediction = tf.nn.softmax(model(tf_valid_dataset))
-                test_prediction = tf.nn.softmax(model(tf_test_dataset))
+                train_prediction = logits
+                valid_prediction = model(tf_valid_dataset)
+                test_prediction = model(tf_test_dataset)
 
                 with tf.Session(graph=graph) as sess:
                     tf.global_variables_initializer().run()
                     for epoch in range(num_epoch):
-                        shuffle = np.random.permutation(train_dataset.shape[0])
-                        train_dataset = train_dataset[shuffle]
-                        train_labels = train_labels[shuffle]
+                        shuffle = np.random.permutation(train_interaction.shape[0])
+                        train_interaction = train_interaction.iloc[shuffle, :]
                         for step in range(num_steps):
-                            offset = batch_size * step % (train_labels.shape[0] - batch_size)
-                            batch_data = train_dataset[offset:(offset + batch_size)]
-                            batch_labels = train_labels[offset:(offset + batch_size)]
-                            batch_data = stitch_topic_features(batch_data)
+                            offset = batch_size * step % (train_interaction.shape[0] - batch_size)
+                            batch_data, batch_labels = stitch_topic_features(train_interaction.iloc[offset:(offset + batch_size), :])
                             feed_dict = {tf_train_dataset: batch_data, tf_train_labels: batch_labels}
                             _, l, preds = sess.run(fetches=[optimizer, loss, train_prediction], feed_dict=feed_dict)
                             if step % max(1, report_interval) == 0:
@@ -282,13 +282,15 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
 
                     print('Predicting...')
                     # comment this when only one model is trained.
-                    # del train_dataset
-                    # del train_labels
-                    # del valid_dataset
-                    # del valid_labels
-                    # del test_dataset
-                    # del test_labels
-                    n_submission = submission_dataset.shape[0]
+                    if len(initial_learning_rate_grid) == 1\
+                            and len(batch_size_grid) == 1\
+                            and len(lambdas) == 1:
+                        del train_interaction
+                        del valid_dataset
+                        del valid_labels
+                        del test_dataset
+                        del test_labels
+                    n_submission = test_interaction.shape[0]
                     preds_rst = np.ndarray(shape=(n_submission), dtype=np.float32)
 
                     start = 0  # inclusively
@@ -296,10 +298,10 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     while end < n_submission:
                         start = end
                         end = min(start + batch_size * 10, n_submission)
-                        batch_data = stitch_topic_features(submission_dataset[start: end])
+                        batch_data = stitch_topic_features(test_interaction.loc[start: end, :])
                         feed_dict = {tf_train_dataset: batch_data}
                         preds, = sess.run(fetches=[train_prediction], feed_dict=feed_dict)
-                        preds_rst[start: end] = preds[:, 1]
+                        preds_rst[start: end] = preds
                     # generate submission
                     submission = pd.DataFrame()
                     submission['user_id'] = test_interaction['user_id']
