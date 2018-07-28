@@ -127,4 +127,5 @@
     - NN with regression (0, 3)
 - predict
     - output shift-mapping to (0, 1)
-
+- train skills
+    - NaN. 检查example以及label是否由nan数据；替换Optimizer；降低learning rate；减小batch size

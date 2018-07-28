@@ -19,12 +19,19 @@ from preprocessing_photo_face_features import NUM_FACE_FEATURE
 from preprocessing_text_feature_embedding import EMBEDDING_SIZE
 
 
-def metric(prediction, target):
-    try:
-        return roc_auc_score(target, prediction)
-    except ValueError:
-        return 1.0
+n_ve_err = 0
+n_metric_call = 0
 
+
+def metric(prediction, target):
+    global n_metric_call
+    n_metric_call += 1
+    global n_ve_err
+    try:
+        return roc_auc_score(target, prediction[:, 0])
+    except ValueError:
+        n_ve_err += 1
+        return 1.0
 
 
 start_point = time.time()
@@ -124,7 +131,7 @@ def stitch_topic_features(interacts: pd.DataFrame):
         dataset[idx, -1] = interacts.loc[idx, 'time']
     if 'label' in interacts.columns:
         labels = np.array(interacts['label'])
-        return dataset, labels
+        return dataset, np.reshape(labels, newshape=[-1, 1])
     else:
         return dataset
 
@@ -147,7 +154,7 @@ print('data size: train={}, valid={}, test={}'.format(train_interaction.shape[0]
 n_label = 1
 n_dim = test_dataset.shape[1]
 scalers = np.array([1])
-batch_base = 1000
+batch_base = 128
 batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
 num_steps_grid = len(train_dataset_idx) // batch_size_grid
 num_epoch = 1
@@ -156,8 +163,8 @@ initial_learning_rate_grid = [0.05]
 final_learning_rate_grid = [0.025]
 
 # hidden layers
-f1_depth = n_dim * 10
-f2_depth = n_dim * 3
+f1_depth = n_dim * 3
+f2_depth = n_dim * 1
 
 # L2 regularization
 lambdas = [0.0]
@@ -177,8 +184,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
             graph = tf.Graph()
             with graph.as_default():
                 tf_train_dataset = tf.placeholder(dtype=tf.float32, shape=[None, n_dim])
-                # sparse style
-                tf_train_labels = tf.placeholder(dtype=tf.int32, shape=[None])
+                tf_train_labels = tf.placeholder(dtype=tf.float32, shape=[None, n_label])
                 tf_valid_dataset = tf.constant(valid_dataset, dtype=tf.float32)
                 tf_test_dataset = tf.constant(test_dataset, dtype=tf.float32)
 
@@ -208,21 +214,22 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     f1 = tf.nn.relu(tf.nn.xw_plus_b(data, weights1, biases1))
                     f2 = tf.nn.relu(tf.nn.xw_plus_b(f1, weights2, biases2))
                     logits = tf.matmul(f2, readout_weights) + readout_biases
-                    logits = tf.reshape(logits, shape=[-1])
                     return logits
 
-
+                # size: (batch_size, 1)
                 logits = model(tf_train_dataset)
 
                 def loss(logits, labels):
                     # MSE error
+                    # err = tf.reduce_mean(tf.log(tf.square(logits - labels) + 1e-10))
                     err = tf.losses.mean_squared_error(labels=labels, predictions=logits)
                     tf.add_to_collection('losses', err)
                     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
                 loss = loss(logits, tf_train_labels)
 
-                optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step)
+                # optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step)
+                optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step)
 
                 # Predictions for the training, validation, and test data.
                 train_prediction = logits
@@ -282,7 +289,8 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     metrics = 'valid metric: {}, test metric: {}\n'.format(vm, epoch_test_metric)
                     print(metrics)
                     logger.write(metrics)
-
+                    print('n_ve_err={}, n_metric_call={}, rate={}'
+                          .format(n_ve_err, n_metric_call, n_ve_err/n_metric_call))
                     # comment this when only one model is trained.
                     if len(initial_learning_rate_grid) == 1\
                             and len(batch_size_grid) == 1\
@@ -301,10 +309,11 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                         while end < n_submission:
                             start = end
                             end = min(start + batch_size * 10, n_submission)
-                            batch_data = stitch_topic_features(test_interaction.loc[start: end, :])
+                            batch_data = stitch_topic_features(test_interaction.loc[start: end-1, :])
                             feed_dict = {tf_train_dataset: batch_data}
-                            preds, = sess.run(fetches=[train_prediction], feed_dict=feed_dict)
-                            preds_rst[start: end] = preds
+                            preds, = sess.run(fetches=[logits], feed_dict=feed_dict)
+                            preds[preds < 0] = 0
+                            preds_rst[start: end] = preds[:, 0]
                         # generate submission
                         submission = pd.DataFrame()
                         submission['user_id'] = test_interaction['user_id']
