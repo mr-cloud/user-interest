@@ -54,7 +54,7 @@ for ind in range(train_interaction.shape[0]):
             w_play = 0
         else:
             w_play = train_interaction.loc[ind, 'playing_time'] / train_interaction.loc[ind, 'duration_time']
-        score[ind] = 1.0/3 * w_play
+        score[ind] = 1.0/3 * max(1.0, w_play)
     else:
         pass
 train_interaction['label'] = score
@@ -208,6 +208,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     f1 = tf.nn.relu(tf.nn.xw_plus_b(data, weights1, biases1))
                     f2 = tf.nn.relu(tf.nn.xw_plus_b(f1, weights2, biases2))
                     logits = tf.matmul(f2, readout_weights) + readout_biases
+                    logits = tf.reshape(logits, shape=[-1])
                     return logits
 
 
@@ -293,7 +294,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                         del test_dataset
                         del test_labels
                         n_submission = test_interaction.shape[0]
-                        preds_rst = np.ndarray(shape=(n_submission), dtype=np.float32)
+                        preds_rst = np.ndarray(shape=n_submission, dtype=np.float32)
 
                         start = 0  # inclusively
                         end = start  # exclusively
@@ -310,7 +311,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                         submission['photo_id'] = test_interaction['photo_id']
                         submission['click_probability'] = preds_rst
                         submission.to_csv(
-                            os.path.join(consts.DATA_HOUSE_PATH, 'v2.0.0-without-image-submission_nn3.txt'),
+                            os.path.join(consts.CLEAN_DATA_PATH, 'v2.0.0-without-image-submission_nn3.txt'),
                             sep='\t', index=False, header=False,
                             float_format='%.6f')
                     print('Finished.')
