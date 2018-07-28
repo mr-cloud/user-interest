@@ -62,7 +62,8 @@ train_interaction['label'] = score
 scaler = MinMaxScaler()
 train_interaction[['time', 'duration_time']] = scaler.fit_transform(train_interaction[['time', 'duration_time']])
 test_interaction[['time', 'duration_time']] = scaler.transform(test_interaction[['time', 'duration_time']])
-train_interaction = train_interaction[test_columns.append('label')]
+test_columns.append('label')
+train_interaction = train_interaction[test_columns]
 print('Cleaned data size: ', train_interaction.shape)
 
 # subsample
@@ -113,7 +114,8 @@ def get_user_vector(uid):
     return user_vector_space[uid]
 
 
-def stitch_topic_features(interacts: pd.Dataframe):
+def stitch_topic_features(interacts: pd.DataFrame):
+    interacts.index = np.arange(interacts.shape[0])
     dataset = np.zeros(shape=(interacts.shape[0], n_feature * 2 + 1))
     for idx in range(dataset.shape[0]):
         dataset[idx, :n_feature] = get_user_vector(interacts.loc[idx, 'user_id'])
@@ -280,35 +282,35 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     print(metrics)
                     logger.write(metrics)
 
-                    print('Predicting...')
                     # comment this when only one model is trained.
                     if len(initial_learning_rate_grid) == 1\
                             and len(batch_size_grid) == 1\
                             and len(lambdas) == 1:
+                        print('Predicting...')
                         del train_interaction
                         del valid_dataset
                         del valid_labels
                         del test_dataset
                         del test_labels
-                    n_submission = test_interaction.shape[0]
-                    preds_rst = np.ndarray(shape=(n_submission), dtype=np.float32)
+                        n_submission = test_interaction.shape[0]
+                        preds_rst = np.ndarray(shape=(n_submission), dtype=np.float32)
 
-                    start = 0  # inclusively
-                    end = start  # exclusively
-                    while end < n_submission:
-                        start = end
-                        end = min(start + batch_size * 10, n_submission)
-                        batch_data = stitch_topic_features(test_interaction.loc[start: end, :])
-                        feed_dict = {tf_train_dataset: batch_data}
-                        preds, = sess.run(fetches=[train_prediction], feed_dict=feed_dict)
-                        preds_rst[start: end] = preds
-                    # generate submission
-                    submission = pd.DataFrame()
-                    submission['user_id'] = test_interaction['user_id']
-                    submission['photo_id'] = test_interaction['photo_id']
-                    submission['click_probability'] = preds_rst
-                    submission.to_csv(
-                        os.path.join(consts.DATA_HOUSE_PATH, 'v2.0.0-without-image-submission_nn3.txt'),
-                        sep='\t', index=False, header=False,
-                        float_format='%.6f')
+                        start = 0  # inclusively
+                        end = start  # exclusively
+                        while end < n_submission:
+                            start = end
+                            end = min(start + batch_size * 10, n_submission)
+                            batch_data = stitch_topic_features(test_interaction.loc[start: end, :])
+                            feed_dict = {tf_train_dataset: batch_data}
+                            preds, = sess.run(fetches=[train_prediction], feed_dict=feed_dict)
+                            preds_rst[start: end] = preds
+                        # generate submission
+                        submission = pd.DataFrame()
+                        submission['user_id'] = test_interaction['user_id']
+                        submission['photo_id'] = test_interaction['photo_id']
+                        submission['click_probability'] = preds_rst
+                        submission.to_csv(
+                            os.path.join(consts.DATA_HOUSE_PATH, 'v2.0.0-without-image-submission_nn3.txt'),
+                            sep='\t', index=False, header=False,
+                            float_format='%.6f')
                     print('Finished.')
