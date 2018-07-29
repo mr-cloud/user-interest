@@ -28,7 +28,7 @@ def metric(prediction, target):
     n_metric_call += 1
     global n_ve_err
     try:
-        return roc_auc_score(target, prediction[:, 0])
+        return roc_auc_score(target, prediction[:, -1])
     except ValueError:
         n_ve_err += 1
         return 1.0
@@ -47,30 +47,12 @@ print('Data size: #train={}, #submit={}'.format(train_interaction.shape[0], test
 
 # data cleaning and normalization
 print('normalizing...')
-score = np.zeros(shape=(train_interaction.shape[0]), dtype=np.float32)
-for ind in range(train_interaction.shape[0]):
-    if ind % 10000 == 0:
-        print('Score processing #{}...'.format(ind))
-    if train_interaction.loc[ind, 'follow'] == 1:
-        score[ind] = 3.0/3
-    elif train_interaction.loc[ind, 'like'] == 1:
-        score[ind] = 2.0/3
-    elif train_interaction.loc[ind, 'click'] == 1:
-        # weighted by playing time
-        if train_interaction.loc[ind, 'duration_time'] == 0:
-            w_play = 0
-        else:
-            w_play = train_interaction.loc[ind, 'playing_time'] / train_interaction.loc[ind, 'duration_time']
-        score[ind] = 1.0/3 * max(1.0, w_play)
-    else:
-        pass
-train_interaction['score'] = score
 train_interaction['label'] = np.array(np.any(train_interaction[['click', 'like', 'follow']], axis=1), dtype=np.int32)
 
 scaler = MinMaxScaler()
 train_interaction[['time', 'duration_time']] = scaler.fit_transform(train_interaction[['time', 'duration_time']])
 test_interaction[['time', 'duration_time']] = scaler.transform(test_interaction[['time', 'duration_time']])
-test_columns.extend(['score', 'label'])
+test_columns.extend(['label'])
 train_interaction = train_interaction[test_columns]
 print('Cleaned data size: ', train_interaction.shape)
 
@@ -130,12 +112,8 @@ def stitch_topic_features(interacts: pd.DataFrame, score_or_label=0):
         dataset[idx, n_feature: n_feature*2] = build_photo_feature(interacts.loc[idx, 'photo_id'],
                                                                       interacts.loc[idx, 'duration_time'])
         dataset[idx, -1] = interacts.loc[idx, 'time']
-    if score_or_label == 0:
-        score = np.array(interacts['score'])
-        return dataset, np.reshape(score, newshape=[-1, 1])
-    elif score_or_label == 1:
-        labels = np.array(interacts['label'])
-        return dataset, np.reshape(labels, newshape=[-1, 1])
+    if score_or_label == 0 or score_or_label == 1:
+        return dataset, np.array(interacts['label'])
     else:
         return dataset
 
@@ -155,9 +133,9 @@ logger.write(data_pre_time_cost)
 train_interaction = train_interaction.iloc[train_dataset_idx, :]
 print('data size: train={}, valid={}, test={}'.format(train_interaction.shape[0], valid_dataset.shape[0], test_dataset.shape[0]))
 
-n_label = 1
+n_label = 2
 n_dim = test_dataset.shape[1]
-scalers = np.array([1, 0.5])
+scalers = np.array([0.125, 0.375, 1])
 batch_base = 1024
 batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
 num_steps_grid = len(train_dataset_idx) // batch_size_grid
@@ -188,7 +166,8 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
             graph = tf.Graph()
             with graph.as_default():
                 tf_train_dataset = tf.placeholder(dtype=tf.float32, shape=[None, n_dim])
-                tf_train_labels = tf.placeholder(dtype=tf.float32, shape=[None, n_label])
+                # sparse
+                tf_train_labels = tf.placeholder(dtype=tf.int32, shape=[None])
                 tf_valid_dataset = tf.constant(valid_dataset, dtype=tf.float32)
                 tf_test_dataset = tf.constant(test_dataset, dtype=tf.float32)
 
@@ -224,9 +203,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                 logits = model(tf_train_dataset)
 
                 def loss(logits, labels):
-                    # MSE error
-                    # err = tf.reduce_mean(tf.log(tf.square(logits - labels) + 1e-10))
-                    err = tf.losses.mean_squared_error(labels=labels, predictions=logits)
+                    err = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits))
                     tf.add_to_collection('losses', err)
                     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
@@ -236,9 +213,9 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                 optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step)
 
                 # Predictions for the training, validation, and test data.
-                train_prediction = logits
-                valid_prediction = model(tf_valid_dataset)
-                test_prediction = model(tf_test_dataset)
+                train_prediction = tf.nn.softmax(logits)
+                valid_prediction = tf.nn.softmax(model(tf_valid_dataset))
+                test_prediction = tf.nn.softmax(model(tf_test_dataset))
 
                 with tf.Session(graph=graph) as sess:
                     tf.global_variables_initializer().run()
@@ -283,7 +260,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
 
                     plt.subplots_adjust(hspace=0.5)
                     # plt.show()
-                    time_consume = '\n{}, Cost time: {} min, regularization: {}, learning rate: {}, final learning rate: {}, batch size: {}\n'.format('nn3', (time.time() - start_point) / 60, wl, initial_learning_rate, final_learning_rate, batch_size)
+                    time_consume = '\n{}, Cost time: {} min, regularization: {}, learning rate: {}, final learning rate: {}, batch size: {}\n'.format('nn3-classification', (time.time() - start_point) / 60, wl, initial_learning_rate, final_learning_rate, batch_size)
                     print(time_consume)
                     logger.write(time_consume)
                     topology = 'f1={}-f2={}'.format(f1_depth, f2_depth )
@@ -317,7 +294,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                             feed_dict = {tf_train_dataset: batch_data}
                             preds, = sess.run(fetches=[logits], feed_dict=feed_dict)
                             preds[preds < 0] = 0
-                            preds_rst[start: end] = preds[:, 0]
+                            preds_rst[start: end] = preds[:, -1]
                         # generate submission
                         submission = pd.DataFrame()
                         submission['user_id'] = test_interaction['user_id']
@@ -326,7 +303,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                         submission.to_csv(
                             os.path.join(consts.CLEAN_DATA_PATH, '{}-{}-{}-{}-'.format(wl, initial_learning_rate, final_learning_rate, batch_size)
                                          + topology
-                                         + 'v2.0.0-without-image-submission_nn3.txt'),
+                                         + 'v2.0.0-without-image-submission_nn3-classification.txt'),
                             sep='\t', index=False, header=False,
                             float_format='%.6f')
                     print('Finished.')
