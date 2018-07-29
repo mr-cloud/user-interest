@@ -64,18 +64,19 @@ for ind in range(train_interaction.shape[0]):
         score[ind] = 1.0/3 * max(1.0, w_play)
     else:
         pass
-train_interaction['label'] = score
+train_interaction['score'] = score
+train_interaction['label'] = np.array(np.any(train_interaction[['click', 'like', 'follow']], axis=1), dtype=np.int32)
 
 scaler = MinMaxScaler()
 train_interaction[['time', 'duration_time']] = scaler.fit_transform(train_interaction[['time', 'duration_time']])
 test_interaction[['time', 'duration_time']] = scaler.transform(test_interaction[['time', 'duration_time']])
-test_columns.append('label')
+test_columns.extend(['score', 'label'])
 train_interaction = train_interaction[test_columns]
 print('Cleaned data size: ', train_interaction.shape)
 
 # subsample
-(pos_example_idx, ) = np.where(train_interaction['label'] >= sys.float_info.min)
-(neg_example_idx, ) = np.where(train_interaction['label'] < sys.float_info.min)
+(pos_example_idx, ) = np.where(train_interaction['label'] == 1)
+(neg_example_idx, ) = np.where(train_interaction['label'] == 0)
 neg_example_idx = resample(neg_example_idx, replace=False, n_samples=min(len(neg_example_idx), 2 * len(pos_example_idx)))
 train_interaction = train_interaction.iloc[np.hstack([pos_example_idx, neg_example_idx]), :]
 print('Subsample data size: ', train_interaction.shape)
@@ -121,7 +122,7 @@ def get_user_vector(uid):
     return user_vector_space[uid]
 
 
-def stitch_topic_features(interacts: pd.DataFrame):
+def stitch_topic_features(interacts: pd.DataFrame, score_or_label=0):
     interacts.index = np.arange(interacts.shape[0])
     dataset = np.zeros(shape=(interacts.shape[0], n_feature * 2 + 1))
     for idx in range(dataset.shape[0]):
@@ -129,7 +130,10 @@ def stitch_topic_features(interacts: pd.DataFrame):
         dataset[idx, n_feature: n_feature*2] = build_photo_feature(interacts.loc[idx, 'photo_id'],
                                                                       interacts.loc[idx, 'duration_time'])
         dataset[idx, -1] = interacts.loc[idx, 'time']
-    if 'label' in interacts.columns:
+    if score_or_label == 0:
+        score = np.array(interacts['score'])
+        return dataset, np.reshape(score, newshape=[-1, 1])
+    elif score_or_label == 1:
         labels = np.array(interacts['label'])
         return dataset, np.reshape(labels, newshape=[-1, 1])
     else:
@@ -142,8 +146,8 @@ train_dataset_idx, test_dataset_idx = train_test_split(dataset_idx)
 train_dataset_idx, valid_dataset_idx = train_test_split(train_dataset_idx)
 test_dataset_idx = resample(test_dataset_idx, replace=False, n_samples=int(0.1 * len(test_dataset_idx) / 3))
 valid_dataset_idx= resample(valid_dataset_idx, replace=False, n_samples=int(0.01 * len(valid_dataset_idx) / 3))
-test_dataset, test_labels = stitch_topic_features(train_interaction.iloc[test_dataset_idx, :])
-valid_dataset, valid_labels = stitch_topic_features(train_interaction.iloc[valid_dataset_idx, :])
+test_dataset, test_labels = stitch_topic_features(train_interaction.iloc[test_dataset_idx, :], score_or_label=1)
+valid_dataset, valid_labels = stitch_topic_features(train_interaction.iloc[valid_dataset_idx, :], score_or_label=1)
 data_pre_time_cost = '\nData preprocessing time: {} min'.format((time.time() - start_point) / 60)
 print(data_pre_time_cost)
 logger.write(data_pre_time_cost)
@@ -154,7 +158,7 @@ print('data size: train={}, valid={}, test={}'.format(train_interaction.shape[0]
 n_label = 1
 n_dim = test_dataset.shape[1]
 scalers = np.array([1])
-batch_base = 128
+batch_base = 256
 batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
 num_steps_grid = len(train_dataset_idx) // batch_size_grid
 num_epoch = 1
@@ -309,7 +313,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                         while end < n_submission:
                             start = end
                             end = min(start + batch_size * 10, n_submission)
-                            batch_data = stitch_topic_features(test_interaction.loc[start: end-1, :])
+                            batch_data = stitch_topic_features(test_interaction.loc[start: end-1, :], score_or_label=-1)
                             feed_dict = {tf_train_dataset: batch_data}
                             preds, = sess.run(fetches=[logits], feed_dict=feed_dict)
                             preds[preds < 0] = 0
