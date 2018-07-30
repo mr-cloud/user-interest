@@ -135,7 +135,7 @@ print('data size: train={}, valid={}, test={}'.format(train_interaction.shape[0]
 
 n_label = 2
 n_dim = test_dataset.shape[1]
-scalers = np.array([3])
+scalers = np.array([0.1, 0.3, 1, 3])
 batch_base = 1024
 batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
 num_steps_grid = len(train_dataset_idx) // batch_size_grid
