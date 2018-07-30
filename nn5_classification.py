@@ -135,10 +135,11 @@ print('data size: train={}, valid={}, test={}'.format(train_interaction.shape[0]
 
 n_label = 2
 n_dim = test_dataset.shape[1]
-scalers = np.array([1, 2])
+scalers = np.array([3])
 batch_base = 1024
 batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
 num_steps_grid = len(train_dataset_idx) // batch_size_grid
+num_steps_grid[num_steps_grid == 0] = 1
 num_epoch = 1
 report_interval_grid = num_steps_grid // 100
 initial_learning_rate_grid = [0.01]
@@ -146,7 +147,9 @@ final_learning_rate_grid = [0.003]
 
 # hidden layers
 f1_depth = n_dim * 3
-f2_depth = n_dim * 1
+f2_depth = n_dim * 10
+f3_depth = n_dim * 10
+f4_depth = n_dim * 3
 
 # L2 regularization
 lambdas = [0.0]
@@ -190,13 +193,20 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                 biases1 = tf.Variable(tf.ones([f1_depth]))
                 weights2 = variable_with_weight_loss([f1_depth, f2_depth], wl, 'weights2')
                 biases2 = tf.Variable(tf.ones([f2_depth]))
-                readout_weights = variable_with_weight_loss([f2_depth, n_label], wl, 'readout_weights')
+                weights3 = variable_with_weight_loss([f2_depth, f3_depth], wl, 'weights3')
+                biases3 = tf.Variable(tf.ones([f3_depth]))
+                weights4 = variable_with_weight_loss([f3_depth, f4_depth], wl, 'weights4')
+                biases4 = tf.Variable(tf.ones([f4_depth]))
+
+                readout_weights = variable_with_weight_loss([f4_depth, n_label], wl, 'readout_weights')
                 readout_biases = tf.Variable(tf.zeros([n_label]))
 
                 def model(data):
                     f1 = tf.nn.relu(tf.nn.xw_plus_b(data, weights1, biases1))
                     f2 = tf.nn.relu(tf.nn.xw_plus_b(f1, weights2, biases2))
-                    logits = tf.matmul(f2, readout_weights) + readout_biases
+                    f3 = tf.nn.relu(tf.nn.xw_plus_b(f2, weights3, biases3))
+                    f4 = tf.nn.relu(tf.nn.xw_plus_b(f3, weights4, biases4))
+                    logits = tf.matmul(f4, readout_weights) + readout_biases
                     return logits
 
                 # size: (batch_size, 1)
