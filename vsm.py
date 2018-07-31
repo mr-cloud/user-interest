@@ -17,6 +17,7 @@ import consts
 from utils import logger
 from preprocessing_photo_face_features import NUM_FACE_FEATURE
 from preprocessing_text_feature_embedding import EMBEDDING_SIZE
+from scipy import spatial
 
 
 n_ve_err = 0
@@ -124,7 +125,8 @@ def ranking(interacts: pd.DataFrame):
         user_vec = get_user_vector(interacts.loc[idx, 'user_id'])
         photo_vec = build_photo_feature(interacts.loc[idx, 'photo_id'],
                                         interacts.loc[idx, 'duration_time'])
-        dists[idx] = np.linalg.norm(user_vec - photo_vec)
+        # dists[idx] = np.linalg.norm(user_vec - photo_vec)
+        dists[idx] = spatial.distance.cosine(user_vec, photo_vec)  # [0, 2]
     sort_args = np.argsort(dists)
     return (n_examples - sort_args) / n_examples
 

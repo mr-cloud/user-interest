@@ -135,7 +135,7 @@ print('data size: train={}, valid={}, test={}'.format(train_interaction.shape[0]
 
 n_label = 2
 n_dim = test_dataset.shape[1]
-scalers = np.array([0.1, 0.3, 1, 3])
+scalers = np.array([0.1, 0.3, 1])
 batch_base = 1024
 batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
 num_steps_grid = len(train_dataset_idx) // batch_size_grid
@@ -146,10 +146,10 @@ initial_learning_rate_grid = [0.01]
 final_learning_rate_grid = [0.003]
 
 # hidden layers
-f1_depth = n_dim * 3
-f2_depth = n_dim * 10
-f3_depth = n_dim * 10
-f4_depth = n_dim * 3
+f1_depth = n_dim * 1
+f2_depth = n_dim * 3
+f3_depth = n_dim * 3
+f4_depth = n_dim * 1
 
 # L2 regularization
 lambdas = [0.0]
@@ -176,6 +176,13 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
 
                 global_step = tf.Variable(0)  # count the number of steps taken.
                 final_learning_rate = final_learning_rate_grid[idx]
+
+                mix = '\n{} training hyper params: regularization: {}, learning rate: {}, final learning rate: {}, batch size: {}\n' \
+                    .format('nn5-classification',
+                            wl, initial_learning_rate, final_learning_rate, batch_size)
+                print(mix)
+                logger.write(mix)
+
                 decay_rate = 0.96
                 learning_rate = tf.train.exponential_decay(initial_learning_rate, global_step, decay_rate=decay_rate,
                                                            decay_steps=num_steps / (
@@ -270,12 +277,12 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
 
                     plt.subplots_adjust(hspace=0.5)
                     # plt.show()
-                    time_consume = '\n{}, Cost time: {} min, regularization: {}, learning rate: {}, final learning rate: {}, batch size: {}\n'.format('nn3-classification', (time.time() - start_point) / 60, wl, initial_learning_rate, final_learning_rate, batch_size)
+                    time_consume = '\n{}, Cost time: {} min, regularization: {}, learning rate: {}, final learning rate: {}, batch size: {}\n'.format('nn5-classification', (time.time() - start_point) / 60, wl, initial_learning_rate, final_learning_rate, batch_size)
                     print(time_consume)
                     logger.write(time_consume)
                     topology = 'f1={}-f2={}'.format(f1_depth, f2_depth )
                     print(topology + '\n')
-                    plt.savefig('datahouse/learning-curve-{}-{}-{}-{}-{}-'.format('nn3-classification', wl, initial_learning_rate, final_learning_rate, batch_size) + topology + '.png')
+                    plt.savefig('datahouse/learning-curve-{}-{}-{}-{}-{}-'.format('nn5-classification', wl, initial_learning_rate, final_learning_rate, batch_size) + topology + '.png')
                     logger.write(topology + '\n')
                     metrics = 'valid metric: {}, test metric: {}\n'.format(vm, epoch_test_metric)
                     print(metrics)
@@ -313,7 +320,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                         submission.to_csv(
                             os.path.join(consts.CLEAN_DATA_PATH, '{}-{}-{}-{}-'.format(wl, initial_learning_rate, final_learning_rate, batch_size)
                                          + topology
-                                         + 'v2.0.0-without-image-submission_nn3-classification.txt'),
+                                         + 'v2.0.0-without-image-submission_nn5-classification.txt'),
                             sep='\t', index=False, header=False,
                             float_format='%.6f')
                     print('Finished.')
