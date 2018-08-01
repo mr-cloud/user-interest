@@ -23,6 +23,11 @@ n_ve_err = 0
 n_metric_call = 0
 
 
+def accuracy(prediction, target):
+    preds = prediction[:, -1]
+    return np.sum(target == (preds > 0.5)) / len(target)
+
+
 def metric(prediction, target):
     global n_metric_call
     n_metric_call += 1
@@ -135,21 +140,21 @@ print('data size: train={}, valid={}, test={}'.format(train_interaction.shape[0]
 
 n_label = 2
 n_dim = test_dataset.shape[1]
-scalers = np.array([0.1, 0.3, 1])
+scalers = np.array([0.3])
 batch_base = 1024
 batch_size_grid = np.array(batch_base * scalers, dtype=np.int32)
 num_steps_grid = len(train_dataset_idx) // batch_size_grid
 num_steps_grid[num_steps_grid == 0] = 1
 num_epoch = 1
 report_interval_grid = num_steps_grid // 100
-initial_learning_rate_grid = [0.01]
-final_learning_rate_grid = [0.003]
+initial_learning_rate_grid = [0.03]
+final_learning_rate_grid = [0.01]
 
 # hidden layers
-f1_depth = n_dim * 1
-f2_depth = n_dim * 3
-f3_depth = n_dim * 3
-f4_depth = n_dim * 1
+f1_depth = n_dim * 3
+f2_depth = n_dim * 10
+f3_depth = n_dim * 10
+f4_depth = n_dim * 3
 
 # L2 regularization
 lambdas = [0.0]
@@ -247,14 +252,19 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                             if step % max(1, report_interval) == 0:
                                 print('Minibatch loss at step %d: %.4f' % (step, l))
                                 tm = metric(preds, batch_labels)
-                                vm = metric(valid_prediction.eval(), valid_labels)
+                                valid_preds = valid_prediction.eval()
+                                vm = metric(valid_preds, valid_labels)
                                 print('Minibatch metric: %.4f' % tm)
                                 print('Validation metric: %.4f\n' % vm)
+                                acc = accuracy(valid_preds, valid_labels)
+                                print('Validation accuracy: %.4f\n' % acc)
                                 cost_history.append(tm)
                                 loss_history.append(l)
                                 cost_cv_history.append(vm)
 
-                        epoch_test_metric = metric(test_prediction.eval(), test_labels)
+                        test_preds = test_prediction.eval()
+                        epoch_test_metric = metric(test_preds, test_labels)
+                        epoch_test_acc = accuracy(test_preds, test_labels)
                         print('Test metric: %.4f' % epoch_test_metric)
                         cost_epoch_history.append(epoch_test_metric)
                     fig, (ax1, ax2, ax3) = plt.subplots(ncols=1, nrows=3)
@@ -284,7 +294,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     print(topology + '\n')
                     plt.savefig('datahouse/learning-curve-{}-{}-{}-{}-{}-'.format('nn5-classification', wl, initial_learning_rate, final_learning_rate, batch_size) + topology + '.png')
                     logger.write(topology + '\n')
-                    metrics = 'valid metric: {}, test metric: {}\n'.format(vm, epoch_test_metric)
+                    metrics = 'valid metric: {}, test metric: {}, test accuracy: {}\n'.format(vm, epoch_test_metric, epoch_test_acc)
                     print(metrics)
                     logger.write(metrics)
                     print('n_ve_err={}, n_metric_call={}, rate={}'

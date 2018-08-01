@@ -126,7 +126,9 @@ def ranking(interacts: pd.DataFrame):
         photo_vec = build_photo_feature(interacts.loc[idx, 'photo_id'],
                                         interacts.loc[idx, 'duration_time'])
         # dists[idx] = np.linalg.norm(user_vec - photo_vec)
-        dists[idx] = spatial.distance.cosine(user_vec, photo_vec)  # [0, 2]
+        # dists[idx] = spatial.distance.cosine(user_vec, photo_vec)  # [0, 2]
+        dists[idx] = 1 - np.dot(user_vec, photo_vec) / (np.linalg.norm(user_vec) * np.linalg.norm(photo_vec)
+                                                        + sys.float_info.min)
     sort_args = np.argsort(dists)
     return (n_examples - sort_args) / n_examples
 
