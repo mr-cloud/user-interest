@@ -38,11 +38,12 @@ for ind in range(train_interaction.shape[0]):
         score[ind] = 2.0/3
     elif train_interaction.loc[ind, 'click'] == 1:
         # weighted by playing time
-        if train_interaction.loc[ind, 'duration_time'] == 0:
-            w_play = 0
-        else:
-            w_play = train_interaction.loc[ind, 'playing_time'] / train_interaction.loc[ind, 'duration_time']
-        score[ind] = 1.0/3 * w_play
+        # if train_interaction.loc[ind, 'duration_time'] == 0:
+        #     w_play = 0
+        # else:
+        #     w_play = train_interaction.loc[ind, 'playing_time'] / train_interaction.loc[ind, 'duration_time']
+        # score[ind] = 1.0/3 * w_play
+        score[ind] = 1.0 / 3
     else:
         pass
 train_interaction['label'] = score

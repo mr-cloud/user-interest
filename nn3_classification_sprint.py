@@ -160,9 +160,11 @@ test_dataset_preds['photo_id'] = train_interaction.iloc[test_dataset_idx, 'photo
 train_interaction = train_interaction.iloc[train_dataset_idx, :]
 
 
-def check_data(dataset, lables):
-# TODO
-    pass
+def check_data(dataset, labels):
+    assert not np.any(np.isinf(dataset))
+    assert not np.any(np.isnan(dataset))
+    assert np.max(labels) == 1
+    assert np.min(labels) == 0
 
 
 check_data(test_dataset, test_labels)
