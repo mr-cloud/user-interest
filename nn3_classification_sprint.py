@@ -34,10 +34,10 @@ def and_or_metric(prediction: pd.DataFrame):
         return
     shift_max = prediction.groupby('user_id')['click_probability'].max().to_dict()
     shift_min = prediction.groupby('user_id')['click_probability'].min().to_dict()
-    prediction['click_probability'] = prediction['user_id'].apply(
-        lambda x: (prediction.loc[x, 'click_probability'] - shift_min.get(x, 0))
-                    / (shift_max.get(x, 1) - shift_min.get(x, 0)))
-    prediction['click_probability'] = and_or_scaling(prediction['shift'])
+    prediction['click_probability'] = prediction.apply(
+        lambda x: (x[2] - shift_min.get(x[0], 0))
+                    / (shift_max.get(x[0], 1) - shift_min.get(x[0], 0) if shift_max.get(x[0], 1) - shift_min.get(x[0], 0) != 0 else x[2]), axis=1)
+    prediction['click_probability'] = and_or_scaling(prediction['click_probability'])
     return prediction
 
 
@@ -152,12 +152,16 @@ valid_dataset, valid_labels = stitch_topic_features(train_interaction.iloc[valid
 data_pre_time_cost = '\nData preprocessing time: {} min'.format((time.time() - start_point) / 60)
 print(data_pre_time_cost)
 logger.write(data_pre_time_cost)
+test_dataset_preds = pd.DataFrame()
+test_dataset_preds['user_id'] = train_interaction.iloc[test_dataset_idx, 'user_id']
+test_dataset_preds['photo_id'] = train_interaction.iloc[test_dataset_idx, 'photo_id']
+
 
 train_interaction = train_interaction.iloc[train_dataset_idx, :]
 
 
 def check_data(dataset, lables):
-
+# TODO
     pass
 
 
@@ -197,6 +201,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
             loss_history = []
             acc_history = []
             acc_epoch_history = []
+            trans_cost_epoch_history = []
 
             graph = tf.Graph()
             with graph.as_default():
@@ -288,9 +293,15 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                         test_preds = test_prediction.eval()
                         epoch_test_metric = metric(test_preds, test_labels)
                         epoch_test_acc = accuracy(test_preds, test_labels)
-                        print('epoch test metric: %.4f, test acc: %.4f' % (epoch_test_metric, epoch_test_acc))
+                        test_dataset_preds['click_probability'] = test_preds[:, -1]
+                        epoch_test_trans_metric = and_or_metric(test_dataset_preds)
+
+                        print('epoch test metric: %.4f, test acc: %.4f, trans metric: %.4f'
+                              % (epoch_test_metric, epoch_test_acc, epoch_test_trans_metric))
                         cost_epoch_history.append(epoch_test_metric)
                         acc_epoch_history.append(epoch_test_acc)
+                        trans_cost_epoch_history.append(epoch_test_trans_metric)
+
                     fig, (ax1, ax2, ax3) = plt.subplots(ncols=1, nrows=3)
                     ax1.plot(range(len(loss_history)), loss_history, 'r')
                     ax1.plot(range(len(acc_history)), acc_history, 'g')
@@ -307,6 +318,7 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     ax2.legend(('train', 'valid'), loc='lower center')
 
                     ax3.plot(range(len(cost_epoch_history)), cost_epoch_history, marker='o')
+                    ax3.plot(range(len(cost_epoch_history)), trans_cost_epoch_history, marker='x')
                     ax3.set_xlim([0, len(cost_epoch_history)])
                     ax3.set_ylim([0, 1])
                     ax3.set_title('epoch')

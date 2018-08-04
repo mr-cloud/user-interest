@@ -24,6 +24,24 @@ n_ve_err = 0
 n_metric_call = 0
 
 
+def and_or_scaling(x, r=3):
+    return 1 - (1 - x**r)**r
+
+
+def and_or_metric(prediction: pd.DataFrame):
+    if ('user_id' not in prediction.columns) \
+            or ('click_probability' not in prediction.columns):
+        print('input is invalid!')
+        return
+    shift_max = prediction.groupby('user_id')['click_probability'].max().to_dict()
+    shift_min = prediction.groupby('user_id')['click_probability'].min().to_dict()
+    prediction['click_probability'] = prediction.apply(
+        lambda x: (x[2] - shift_min.get(x[0], 0))
+                    / (shift_max.get(x[0], 1) - shift_min.get(x[0], 0) if shift_max.get(x[0], 1) - shift_min.get(x[0], 0) != 0 else x[2]), axis=1)
+    prediction['click_probability'] = and_or_scaling(prediction['click_probability'])
+    return prediction
+
+
 def metric(prediction, target):
     global n_metric_call
     n_metric_call += 1
@@ -136,18 +154,28 @@ def ranking(interacts: pd.DataFrame):
 time_consume = '\n{}, Cost time: {} min, \n'.format('vsm', (time.time() - start_point) / 60)
 print(time_consume)
 logger.write(time_consume)
-train_metric = metric(ranking(train_interaction), train_interaction['label'])
+ranks = ranking(train_interaction)
+train_metric = metric(ranks, train_interaction['label'])
+trans_preds = pd.DataFrame()
+trans_preds['user_id'] = train_interaction['user_id']
+trans_preds['photo_id'] = train_interaction['photo_id']
+trans_preds['click_probability'] = ranks
+trans_preds = and_or_metric(trans_preds)
+trans_preds_metric = metric(trans_preds, train_interaction['label'])
+
 print('train metric: {}'.format(train_metric))
 logger.write('train metric: {}'.format(train_metric))
+print('trans train metric: {}'.format(trans_preds_metric))
+logger.write('trans train metric: {}'.format(trans_preds_metric))
 
 
 # generate submission
-submission = pd.DataFrame()
-submission['user_id'] = test_interaction['user_id']
-submission['photo_id'] = test_interaction['photo_id']
-submission['click_probability'] = ranking(test_interaction)
-submission.to_csv(
-    os.path.join(consts.CLEAN_DATA_PATH, 'v3.0.0-without-image-submission_vsm.txt'),
-    sep='\t', index=False, header=False,
-    float_format='%.6f')
+# submission = pd.DataFrame()
+# submission['user_id'] = test_interaction['user_id']
+# submission['photo_id'] = test_interaction['photo_id']
+# submission['click_probability'] = ranking(test_interaction)
+# submission.to_csv(
+#     os.path.join(consts.CLEAN_DATA_PATH, 'v3.0.0-without-image-submission_vsm.txt'),
+#     sep='\t', index=False, header=False,
+#     float_format='%.6f')
 print('Finished.')
