@@ -23,6 +23,24 @@ n_ve_err = 0
 n_metric_call = 0
 
 
+def and_or_scaling(x, r=3):
+    return 1 - (1 - x**r)**r
+
+
+def and_or_metric(prediction: pd.DataFrame):
+    if ('user_id' not in prediction.columns) \
+            or ('click_probability' not in prediction.columns):
+        print('input is invalid!')
+        return
+    shift_max = prediction.groupby('user_id')['click_probability'].max().to_dict()
+    shift_min = prediction.groupby('user_id')['click_probability'].min().to_dict()
+    prediction['click_probability'] = prediction['user_id'].apply(
+        lambda x: (prediction.loc[x, 'click_probability'] - shift_min.get(x, 0))
+                    / (shift_max.get(x, 1) - shift_min.get(x, 0)))
+    prediction['click_probability'] = and_or_scaling(prediction['shift'])
+    return prediction
+
+
 def accuracy(prediction, target):
     preds = prediction[:, -1]
     return np.sum(target == (preds > 0.5)) / len(target)
@@ -139,7 +157,7 @@ train_interaction = train_interaction.iloc[train_dataset_idx, :]
 
 
 def check_data(dataset, lables):
-    # TODO
+
     pass
 
 
@@ -307,38 +325,39 @@ for idx, initial_learning_rate in enumerate(initial_learning_rate_grid):
                     logger.write(metrics)
                     print('n_ve_err={}, n_metric_call={}, rate={}'
                           .format(n_ve_err, n_metric_call, n_ve_err/n_metric_call))
-                    # comment this when only one model is trained.
-                    if len(initial_learning_rate_grid) == 1\
-                            and len(batch_size_grid) == 1\
-                            and len(lambdas) == 1:
-                        print('Predicting...')
-                        del train_interaction
-                        del valid_dataset
-                        del valid_labels
-                        del test_dataset
-                        del test_labels
-                        n_submission = test_interaction.shape[0]
-                        preds_rst = np.ndarray(shape=n_submission, dtype=np.float32)
 
-                        start = 0  # inclusively
-                        end = start  # exclusively
-                        while end < n_submission:
-                            start = end
-                            end = min(start + batch_size * 10, n_submission)
-                            batch_data = stitch_topic_features(test_interaction.loc[start: end-1, :], score_or_label=-1)
-                            feed_dict = {tf_train_dataset: batch_data}
-                            preds, = sess.run(fetches=[logits], feed_dict=feed_dict)
-                            preds[preds < 0] = 0
-                            preds_rst[start: end] = preds[:, -1]
-                        # generate submission
-                        submission = pd.DataFrame()
-                        submission['user_id'] = test_interaction['user_id']
-                        submission['photo_id'] = test_interaction['photo_id']
-                        submission['click_probability'] = preds_rst
-                        submission.to_csv(
-                            os.path.join(consts.CLEAN_DATA_PATH, '{}-{}-{}-{}-'.format(wl, initial_learning_rate, final_learning_rate, batch_size)
-                                         + topology
-                                         + 'v2.0.0-without-image-submission_nn3_classification_sprint.txt'),
-                            sep='\t', index=False, header=False,
-                            float_format='%.6f')
+                    # predicting for submission
+                    # if len(initial_learning_rate_grid) == 1\
+                    #         and len(batch_size_grid) == 1\
+                    #         and len(lambdas) == 1:
+                    #     print('Predicting...')
+                    #     del train_interaction
+                    #     del valid_dataset
+                    #     del valid_labels
+                    #     del test_dataset
+                    #     del test_labels
+                    #     n_submission = test_interaction.shape[0]
+                    #     preds_rst = np.ndarray(shape=n_submission, dtype=np.float32)
+                    #
+                    #     start = 0  # inclusively
+                    #     end = start  # exclusively
+                    #     while end < n_submission:
+                    #         start = end
+                    #         end = min(start + batch_size * 10, n_submission)
+                    #         batch_data = stitch_topic_features(test_interaction.loc[start: end-1, :], score_or_label=-1)
+                    #         feed_dict = {tf_train_dataset: batch_data}
+                    #         preds, = sess.run(fetches=[logits], feed_dict=feed_dict)
+                    #         preds[preds < 0] = 0
+                    #         preds_rst[start: end] = preds[:, -1]
+                    #     # generate submission
+                    #     submission = pd.DataFrame()
+                    #     submission['user_id'] = test_interaction['user_id']
+                    #     submission['photo_id'] = test_interaction['photo_id']
+                    #     submission['click_probability'] = preds_rst
+                    #     submission.to_csv(
+                    #         os.path.join(consts.CLEAN_DATA_PATH, '{}-{}-{}-{}-'.format(wl, initial_learning_rate, final_learning_rate, batch_size)
+                    #                      + topology
+                    #                      + 'v2.0.0-without-image-submission_nn3_classification_sprint.txt'),
+                    #         sep='\t', index=False, header=False,
+                    #         float_format='%.6f')
                     print('Finished.')
