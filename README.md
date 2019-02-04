@@ -42,8 +42,9 @@
     - 待预测的用户都有交互历史
     - 用户数同*train_interaction.txt*
 
-##策略：
-###物以类聚，人以群分
+## 策略：
+### 物以类聚，人以群分
+
 作品分类：分K1类 belongs to [10, 100] (IMDB电影分类标签: 12, Youtube: 18)
 - 输入特征：人脸 --> 文字 --> 图像
     - face features. <num_face, face_occu, gender_pref ([0, 1] 0 means all female, 1 means all male), age, looking
@@ -64,7 +65,7 @@
 - 计算点击率：P{click} = pop_features[cate_id] mapped into [0, 1]
 - 输出结果：<user_id, photo_id, click_probability>
 
-###监督学习 v1.0.0
+### 监督学习 v1.0.0
 什么样的用户面对什么样的作品，出现点击或者不点击: <user_features, photo_features, click ({0 ,1})>
 - 输入样例：历史交互数据
 <user_id, photo_id, click> -> <user_id_count, user_click_oof, user_play_time_oof, duration_time, time, click>
@@ -82,7 +83,7 @@
 - 模型：LR
 - 预测：LR.predict_proba(X_test)[:, 1]
 
-###监督学习 v2.0.0
+### 监督学习 v2.0.0
 - 扩展作品相关feature
     <user_click_oof, user_play_time_oof, duration_time, time, num_face, face_occu, gender_pref, age, looking, topic, click>
 - 模型使用集成学习算法 + GridSearch调优
